@@ -1,0 +1,6 @@
+[project]
+name = "citefix"
+version = "0.1.0"
+description = "Checks that each citation exists, supports the sentence it is attached to, and suggests a real paper when it does not."
+requires-python = ">=3.10"
+dependencies = []

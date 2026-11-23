@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-23T12:24:24+00:00",
+  "title": "Design System: citefix",
+  "extensions": {
+    "colorMeta": {
+      "ink-blue-shell": {
+        "role": "primary",
+        "displayName": "Ink-Blue Shell",
+        "canonical": "oklch(26.4% 0.061 256.9)",
+        "tonalRamp": [
+          "#070b12",
+          "#1d2632",
+          "#354357",
+          "#4f627e",
+          "#6b84a7",
+          "#92a7c4",
+          "#bacbe2",
+          "#e4f0ff"
+        ]
+      },
+      "blue-pencil": {
+        "role": "primary",
+        "displayName": "Blue Pencil",
+        "canonical": "oklch(49.1% 0.216 264.5)",
+        "tonalRamp": [
+          "#020921",
+          "#0d2052",
+          "#1c3b89",
+          "#2c57c4",
+          "#3f76ff",
+          "#6ea0ff",
+          "#9ec7ff",
+          "#d1efff"
+        ]
+      },
+      "stet-green": {
+        "role": "secondary",
+        "displayName": "Stet Green",
+        "canonical": "oklch(51.0% 0.130 150.7)",
+        "tonalRamp": [
+          "#020f05",
+          "#0c2d16",
+          "#1a4e2a",
+          "#2a7240",
+          "#3d9758",
+          "#73b883",
+          "#a4d8af",
+          "#d5f9dc"
+        ]
+      },
+      "query-amber": {
+        "role": "secondary",
+        "displayName": "Query Amber",
+        "canonical": "oklch(52.2% 0.115 64.9)",
+        "tonalRamp": [
+          "#130801",
+          "#361f06",
+          "#5c3911",
+          "#86551d",
+          "#b1722e",
+          "#cd9966",
+          "#eac099",
+          "#ffe9ce"
+        ]
+      },
+      "proof-red": {
+        "role": "secondary",
+        "displayName": "Proof Red",
+        "canonical": "oklch(51.2% 0.195 23.1)",
+        "tonalRamp": [
+          "#1b0203",
+          "#460d10",
+          "#761d20",
+          "#a92d33",
+          "#de4248",
+          "#f77976",
+          "#ffaaa5",
+          "#ffdad5"
+        ]
+      },
+      "cool-desk": {
+        "role": "neutral",
+        "displayName": "Cool Desk",
+        "canonical": "oklch(95.4% 0.006 255.5)",
+        "tonalRamp": [
+          "#090b0e",
+          "#232528",
+          "#404245",
+          "#5f6165",
+          "#808286",
+          "#a2a5a9",
+          "#c6c9cd",
+          "#eceff3"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "oklch(23.7% 0.011 254.1)",
+        "tonalRamp": [
+          "#080b10",
+          "#21252b",
+          "#3e4248",
+          "#5d6268",
+          "#7e8389",
+          "#a0a6ac",
+          "#c4cad1",
+          "#e9eff6"
+        ]
+      },
+      "slate-note": {
+        "role": "neutral",
+        "displayName": "Slate Note",
+        "canonical": "oklch(53.0% 0.021 250.8)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#22252a",
+          "#3d4349",
+          "#5a626b",
+          "#79848f",
+          "#9da6b0",
+          "#c3cad1",
+          "#eaeff4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "The product name in the bar."
+      },
+      "body": {
+        "displayName": "Manuscript",
+        "purpose": "The proof of the student's passage, max 68ch."
+      },
+      "quote": {
+        "displayName": "Quote",
+        "purpose": "Sentences quoted from abstracts, in italic."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Column headings and buttons."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Margin notes, status, reference details."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "DOIs and arXiv ids only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "sheet",
+        "value": "0 1px 2px rgba(15, 23, 42, 0.06), 0 22px 44px -26px rgba(15, 23, 42, 0.3)",
+        "purpose": "The manuscript sheet only; nothing inside it casts a shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-ink",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Every transition: notes sliding in, underlines inking, notes re-flowing."
+      },
+      {
+        "name": "ink-lands",
+        "value": "text-decoration-color 0.6s; note opacity and translateX(12px) 0.5s; insertion 0.7s from -0.35em",
+        "purpose": "The one authored moment: a verdict landing. Disabled under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "960px"
+      },
+      {
+        "name": "phone",
+        "value": "560px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Check citations, on the ink-blue bar.",
+      "html": "<div class=\"ds-bar\"><button class=\"ds-btn-primary\">Check citations</button></div>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-bar{background:var(--shell);padding:14px}.ds-btn-primary{background:var(--shell-ink);color:var(--shell);border:1px solid transparent;border-radius:9px;padding:10px 17px;font:600 14px/1 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;cursor:pointer;transition:background-color .15s}.ds-btn-primary:hover{background:#fff}.ds-btn-primary:focus-visible{outline:2px solid #9db8ff;outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action on the bar (Load example).",
+      "html": "<div class=\"ds-bar\"><button class=\"ds-btn-ghost\">Load example</button></div>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-bar{background:var(--shell);padding:14px}.ds-btn-ghost{background:transparent;color:var(--shell-ink);border:1px solid rgba(238,242,249,.28);border-radius:9px;padding:10px 17px;font:600 14px/1 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;cursor:pointer}.ds-btn-ghost:hover{border-color:#b7c4da}.ds-btn-ghost:focus-visible{outline:2px solid #9db8ff;outline-offset:2px}"
+    },
+    {
+      "name": "Small Action Button",
+      "kind": "button",
+      "refersTo": "button-small",
+      "description": "Actions inside a margin note (Copy reference, Open paper).",
+      "html": "<button class=\"ds-btn-small\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"7\" y=\"7\" width=\"9.5\" height=\"9.5\" rx=\"2\"/><path d=\"M13 7V5a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 4 5v6a1.5 1.5 0 0 0 1.5 1.5H7\"/></svg>Copy reference</button>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-btn-small{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);color:var(--pencil);border:1px solid var(--rule-strong);border-radius:8px;padding:7px 11px;font:600 13px/1 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;cursor:pointer}.ds-btn-small:hover{border-color:var(--pencil)}.ds-btn-small:focus-visible{outline:2px solid var(--pencil);outline-offset:2px}"
+    },
+    {
+      "name": "Proof Marks",
+      "kind": "custom",
+      "refersTo": "proof-marks",
+      "description": "How verdicts mark the manuscript: supported, uncertain, wrong, and an inserted citation.",
+      "html": "<p class=\"ds-proof\"><span class=\"ds-ok\">Transformers rely entirely on attention [1].</span> <span class=\"ds-warn\">Only part of this holds [2].</span> <span class=\"ds-bad\">Batch normalization allows higher learning rates <span class=\"ds-struck\">[3]</span>.</span><ins class=\"ds-ins\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.5 15.5L10 5.5l5.5 10\"/></svg>(Ioffe &amp; Szegedy, 2015)</ins></p>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-proof{font:400 17px/1.85 Literata,'Iowan Old Style',Charter,Georgia,serif;color:var(--ink);max-width:60ch}.ds-ok,.ds-warn,.ds-bad{text-decoration-line:underline;text-underline-offset:.32em;text-decoration-skip-ink:none}.ds-ok{text-decoration-color:var(--stet);text-decoration-thickness:2px}.ds-warn{text-decoration-style:dotted;text-decoration-color:var(--query);text-decoration-thickness:3px}.ds-bad{text-decoration-style:wavy;text-decoration-color:var(--proof);text-decoration-thickness:1.5px}.ds-struck{color:var(--ink-3);text-decoration:line-through 2px var(--proof)}.ds-ins{display:inline-flex;align-items:center;gap:2px;margin-left:.3em;color:var(--pencil);font-style:italic;text-decoration:none}"
+    },
+    {
+      "name": "Margin Note: Supported",
+      "kind": "card",
+      "refersTo": "margin-note",
+      "description": "A supported citation: verdict, source line, and the abstract's own sentence.",
+      "html": "<article class=\"ds-note\"><header class=\"ds-head\"><span class=\"ds-ref\">[1]</span><span class=\"ds-verdict\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.5 10.5l3.5 3.5 7.5-8\"/></svg>Supported</span></header><p class=\"ds-src\">Vaswani et al., 2017 · <cite>Attention Is All You Need</cite></p><blockquote class=\"ds-quote\">“We propose a new simple network architecture, the Transformer, based solely on attention mechanisms.”</blockquote></article>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-note{max-width:340px;padding:8px 10px 10px;border-radius:10px;font:400 13.5px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:var(--ink-2)}.ds-note:hover{background:var(--pencil-wash)}.ds-head{display:flex;align-items:center;gap:9px}.ds-ref{color:var(--ink-3);font-weight:600;font-size:12.5px}.ds-verdict{display:inline-flex;align-items:center;gap:6px;color:var(--stet);font-weight:650}.ds-src{margin:2px 0 0;color:var(--ink-3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-quote{margin:7px 0 0;padding:7px 11px;border-radius:8px;background:var(--stet-wash);color:var(--ink);font:italic 400 14px/1.5 Literata,'Iowan Old Style',Charter,Georgia,serif}"
+    },
+    {
+      "name": "Margin Note: Suggested Fix",
+      "kind": "custom",
+      "refersTo": "evidence-suggested",
+      "description": "The agent's replacement, quoted and re-checked, in blue pencil.",
+      "html": "<div class=\"ds-fix\"><p class=\"ds-label\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.5 15.5L10 5.5l5.5 10\"/></svg>Cite instead</p><p class=\"ds-refline\">Ioffe, S., &amp; Szegedy, C. (2015). Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift.</p><blockquote class=\"ds-quote\">“Batch Normalization allows us to use much higher learning rates.”</blockquote><p class=\"ds-check\">A separate check agrees this abstract supports your sentence.</p></div>",
+      "css": ":host{--ink:#1b1f24;--ink-2:#454d57;--ink-3:#636d78;--pencil:#1f4fd8;--stet:#157a3c;--query:#965905;--proof:#bd172b;--shell:#102542;--shell-ink:#eef2f9;--rule-strong:#c6cdd6;--stet-wash:#e8f5ed;--pencil-wash:#ebf0fd;--sheet:#fff}.ds-fix{max-width:340px;padding-top:10px;border-top:1px dashed var(--rule-strong);font:400 13.5px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:var(--ink-2)}.ds-label{display:flex;align-items:center;gap:6px;margin:0;color:var(--pencil);font-weight:650}.ds-refline{margin:6px 0 0;color:var(--ink);font:400 14px/1.55 Literata,'Iowan Old Style',Charter,Georgia,serif}.ds-quote{margin:7px 0 0;padding:7px 11px;border-radius:8px;background:var(--pencil-wash);color:var(--ink);font:italic 400 14px/1.5 Literata,'Iowan Old Style',Charter,Georgia,serif}.ds-check{margin:7px 0 0;color:var(--ink-3);font-size:12.5px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Proof Room",
+    "overview": "citefix treats the student's manuscript as a galley proof on an editor's desk. The text is the interface: each citation is checked in place, and its verdict is written in the margin beside the sentence, the way a copy-editor marks a proof. A cool grey desk holds one white sheet; a deep ink-blue bar carries the product's own controls. Everything else on the page is ink, and each ink has exactly one job.\n\nThe page is calm and dense in the way a well-set proof is dense: one reading column at about 68 characters, a ruled margin column of short notes, and a reference list under the text. Motion is reserved for the moment a verdict lands: the underline inks in, the note slides into the margin, and an inserted citation drops into the line in blue pencil.",
+    "keyCharacteristics": [
+      "The manuscript, not a card list, carries the results.",
+      "Four inks with fixed meanings: stet green, query amber, proof red, blue pencil.",
+      "Literata for everything a person reads at length; the system sans for controls; mono only for DOIs and ids.",
+      "Evidence is always shown: a verdict without its quoted sentence is incomplete.",
+      "One sheet, one shadow, no ornament."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink, One Job Rule",
+        "section": "colors",
+        "body": "Green only ever means supported, amber only ever means uncertain, red only ever means wrong or missing, blue only ever means the agent's suggestion or an action. No ink is used for decoration."
+      },
+      {
+        "name": "The Shell Stays Out of the Text Rule",
+        "section": "colors",
+        "body": "Ink-blue belongs to the bar and controls. The manuscript is graphite on white until a verdict marks it."
+      },
+      {
+        "name": "The Evidence Reads Like Text Rule",
+        "section": "typography",
+        "body": "Anything quoted from a source is set in Literata italic on its ink's wash, never in the UI sans."
+      },
+      {
+        "name": "The One Sheet Rule",
+        "section": "elevation",
+        "body": "Nothing inside the sheet casts a shadow. Notes, quotes and buttons separate by space, washes and hairlines."
+      }
+    ],
+    "dos": [
+      "Do show the quoted sentence with every verdict, on the wash of its ink.",
+      "Do keep the four inks to their single meanings, in the text and in the margin alike.",
+      "Do keep notes short by default (verdict, source line, quote) and put explanations and agent trails behind one click.",
+      "Do label any replayed or recorded check as such, in Blue Pencil, wherever its results appear."
+    ],
+    "donts": [
+      "Don't turn results into a grid of same-size cards; the manuscript carries the results.",
+      "Don't use ink colours for decoration, gradients or tinted backgrounds outside their washes.",
+      "Don't add shadows inside the sheet or a coloured stripe down the side of a note.",
+      "Don't set quotes or the manuscript in the UI sans, or use monospace for anything but identifiers."
+    ]
+  }
+}

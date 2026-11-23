@@ -1,0 +1,7 @@
+Transformers dispense with recurrence and convolutions and rely entirely on attention mechanisms [1]. Residual connections made it possible to train networks that are much deeper than earlier architectures [2]. Batch normalization reduces internal covariate shift and allows much higher learning rates [3]. Retrieval-augmented generation combines a parametric seq2seq model with a dense vector index of Wikipedia [4].
+
+References
+[1] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 30.
+[2] He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 770–778).
+[3] Kingma, D. P., & Ba, J. (2015). Adam: A method for stochastic optimization. In International Conference on Learning Representations.
+[4] Kowalski, A., Dubois, M., & Sato, K. (2023). Self-verifying language agents for automated literature review. Nature Machine Intelligence, 5, 802–811.

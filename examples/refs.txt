@@ -1,0 +1,5 @@
+# One reference per line. Lines starting with # are ignored.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 30.
+[2] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image recognition,” in Proc. IEEE CVPR, 2016, pp. 770–778.
+Hinton, G., Vaswani, A., & Shazeer, N. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 30.
+Zhang, L., & Moreau, P. (2021). Recursive gradient folding for sparse transformer distillation. Advances in Neural Information Processing Systems, 34, 11203–11215.

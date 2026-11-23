@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>citefix · every citation, checked against its source</title>
+  <meta name="description" content="Paste a passage and its references. citefix checks that each cited paper exists, that it supports the sentence citing it, and finds the right paper when it does not.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&amp;display=swap">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="bar">
+    <h1 class="brand">
+      <a class="wordmark" href="/">
+        <span class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5L10 5.5l5.5 10"/></svg></span>citefix
+      </a>
+    </h1>
+    <p class="purpose">Checks that each cited paper exists, says what you cite it for, and finds the right one when it doesn’t.</p>
+    <div class="actions">
+      <button id="example" class="button ghost" type="button">Load example</button>
+      <button id="run" class="button primary" type="button">Check citations</button>
+    </div>
+  </header>
+
+  <main class="desk">
+    <div class="sheet">
+      <section class="text-col" aria-labelledby="manuscript-title">
+        <div class="col-head">
+          <h2 id="manuscript-title">Manuscript</h2>
+          <button id="edit" class="button text" type="button" hidden>Edit text</button>
+        </div>
+        <label class="visually-hidden" for="input">Passage and reference list</label>
+        <textarea id="input" class="editor" spellcheck="false" placeholder="Paste a passage that cites its sources, for example: “…and rely entirely on attention mechanisms [1].”
+
+Then a line that says References, and one reference per line:
+
+References
+[1] Vaswani, A., et al. (2017). Attention is all you need. NeurIPS."></textarea>
+        <article id="proof" class="proof" aria-label="Manuscript with marks" hidden></article>
+      </section>
+
+      <section id="refs" class="refs-col" aria-labelledby="refs-title" hidden>
+        <h2 id="refs-title">References</h2>
+        <ol id="ref-list" class="ref-list"></ol>
+      </section>
+
+      <aside class="margin-col" aria-labelledby="checks-title">
+        <div class="col-head"><h2 id="checks-title">Checks</h2></div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div id="progress" class="progress" hidden><span></span></div>
+        <div id="notes" class="notes" hidden></div>
+        <div id="legend" class="legend">
+          <p class="legend-intro">Each citation gets a mark in the text and a note in this margin.</p>
+          <dl>
+            <div>
+              <dt><span class="sample is-ok">says what you cite it for</span></dt>
+              <dd>Supported. The note quotes the abstract sentence that shows it.</dd>
+            </div>
+            <div>
+              <dt><span class="sample is-warn">only part of it holds</span></dt>
+              <dd>Partly supported, or the abstract is too brief to tell.</dd>
+            </div>
+            <div>
+              <dt><span class="sample is-bad">a claim the paper never makes</span></dt>
+              <dd>Not supported, or the reference does not exist.</dd>
+            </div>
+            <div>
+              <dt><span class="marker is-struck">[3]</span><ins class="insert"><span class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5L10 5.5l5.5 10"/></svg></span>(Ioffe &amp; Szegedy, 2015)</ins></dt>
+              <dd>A real paper the agent found, quoted, and checked a second time.</dd>
+            </div>
+          </dl>
+          <p class="legend-fine">Nothing is taken on the model’s word. Papers come from OpenAlex, Crossref and arXiv, every quote is matched against the abstract it came from, and the agent can only suggest papers its own searches returned.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>Prototype for the Silicon Valley Buildathon 2026 · Records from OpenAlex, Crossref and arXiv · Judgments by DeepSeek</p>
+    <p id="usage" class="usage"></p>
+  </footer>
+</body>
+</html>
