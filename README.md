@@ -65,6 +65,7 @@ What testing changed:
 - OpenAlex writes GPT-3's first author as "Brown, Tom B.", which broke author matching. Matching now ignores name order.
 - Crossref's response headers say its public pool allows one request per second. Requests now follow the pace a source announces.
 - arXiv timed out during a live run and left the agent with no results. Timeouts no longer retry, Crossref was added as a search source, and failed sources are shown in the agent's trail.
+- Without a key, everyone on the same IP address shares one small OpenAlex budget. It ran out partway through one test run, and again on the deployed server. Both now use a free key: two reruns gave the same numbers, with no failed lookups.
 - Known gap: Chinese-language works are poorly covered by these indexes.
 
 Test sets and every run are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md).
