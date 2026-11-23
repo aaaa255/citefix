@@ -1,21 +1,10 @@
----
-title: citefix
-emoji: 📝
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
-short_description: Checks every citation in a passage against its source
----
-
 # citefix
 
 > Paste a passage and its reference list. For every citation, citefix checks that the paper exists, that it actually supports the sentence citing it, and, if it does not, finds a real paper that does.
 
 Built for the [Silicon Valley Buildathon](https://silicon-valley-buildathon.devpost.com/) 2026. 中文说明见 [README.zh-CN.md](README.zh-CN.md)。
 
-**Live demo:** the Space URL goes here once it is deployed.
+**Live demo:** https://citefix-g7nq.onrender.com. It runs on a free Render instance, which sleeps after 15 idle minutes, so the first visit may take about a minute to wake it.
 
 ## Why
 
@@ -48,7 +37,7 @@ Put keys in `.env` (copy `.env.example`):
 | `S2_API_KEY` | Optional; Semantic Scholar is skipped without it. |
 | `CROSSREF_MAILTO` | Optional contact address for Crossref's polite pool. |
 
-For a public deployment (see `Dockerfile`), `CITEFIX_PER_IP_PER_HOUR` and `CITEFIX_DAILY_LIMIT` cap how many checks visitors can run.
+For a public deployment (see `render.yaml` and `Dockerfile`), `CITEFIX_PER_IP_PER_HOUR` and `CITEFIX_DAILY_LIMIT` cap how many checks visitors can run.
 
 ## How it was tested
 

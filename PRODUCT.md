@@ -32,7 +32,7 @@ Used on a laptop while revising a manuscript. Input is pasted text: the body, a 
 - Progress streams live from the server; checking the four-citation example takes about 25 seconds.
 - Free-tier limits: Crossref allows one request per second; OpenAlex needs a free key; Semantic Scholar is only used with a key.
 - Chinese-language references are poorly covered by the available indexes (known gap).
-- Deployment: Hugging Face Spaces (Docker), with the code in a public GitHub repository. The public demo caps checks per visitor and per day.
+- Deployment: Render's free web service (Docker), with the code in a public GitHub repository. Free instances sleep after 15 idle minutes and take about a minute to wake. The public demo caps checks per visitor and per day. (Hugging Face's free tier only allows static Spaces, which cannot run the Python backend.)
 - Undecided: the product name (citefix is a working name).
 
 ## Evidence on Hand
