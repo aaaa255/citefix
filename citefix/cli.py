@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -95,7 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--json", action="store_true", help="print the full results as JSON")
     serve = commands.add_parser("serve", help="run the web app")
     serve.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 to accept other machines")
-    serve.add_argument("--port", type=int, default=8765)
+    serve.add_argument("--port", type=int, default=int(os.environ.get("PORT") or 8765),
+                       help="defaults to $PORT when a host sets it, otherwise 8765")
     serve.add_argument("--record", metavar="FILE", help="dev: save each check's events to FILE")
     serve.add_argument("--replay", metavar="FILE", help="dev: answer every check by replaying FILE (labelled)")
     args = parser.parse_args(argv)
