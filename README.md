@@ -4,7 +4,7 @@
 
 Built for the [Silicon Valley Buildathon](https://silicon-valley-buildathon.devpost.com/) 2026. 中文说明见 [README.zh-CN.md](README.zh-CN.md)。
 
-**Live demo:** the link goes here once it is deployed on Render.
+**Live demo:** https://citefix-g7nq.onrender.com. It runs on a free Render instance, which sleeps after 15 idle minutes, so the first visit may take about a minute to wake it.
 
 ## Why
 

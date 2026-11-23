@@ -4,6 +4,8 @@ English: [README.md](README.md)
 
 ## 部署（Render）
 
+线上地址：https://citefix-g7nq.onrender.com
+
 仓库里的 `render.yaml` 和 `Dockerfile` 就是 Render 用的配置：只用标准库，不用安装依赖，端口取平台给的 `PORT`。在 Render 上新建 Blueprint，选这个仓库，按提示填 `DEEPSEEK_API_KEY` 和 `OPENALEX_API_KEY`。免费实例闲置 15 分钟会休眠，下次打开要等大约一分钟。公网版默认限流：每个访问者每小时 10 次检查，全站每天 200 次，可以用环境变量 `CITEFIX_PER_IP_PER_HOUR`、`CITEFIX_DAILY_LIMIT` 调整。
 
 （Hugging Face 现在只有 Static Space 免费，跑不了 Python 后端，所以没用它。）
