@@ -259,6 +259,64 @@ details > summary { cursor: pointer; }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--pencil); animation: pulse 1.15s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.25; transform: scale(0.75); } 50% { opacity: 1; transform: none; } }
 
+/* ---------- tester feedback: blue pencil, because marking a note is the reader's action, not a verdict ---------- */
+.field {
+  display: block; width: 100%; margin: 5px 0 0; padding: 8px 10px;
+  border: 1px solid var(--rule-strong); border-radius: 8px;
+  background: var(--sheet); color: var(--ink); caret-color: var(--pencil);
+  font: 400 14px/1.5 var(--ui);
+  transition: border-color 0.15s;
+}
+.field::placeholder { color: var(--ink-3); }
+.field:hover { border-color: var(--ink-3); }
+.field:focus-visible { border-color: var(--pencil); outline-offset: 1px; border-radius: 8px; }
+textarea.field { min-height: 5.2em; resize: vertical; }
+
+.note-body > .vote { margin-top: 9px; }
+.vote { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--ink-3); font-size: 12.5px; }
+.vote-q { margin-right: 4px; }
+.vote-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px 3px 7px; border: 1px solid transparent; border-radius: 7px;
+  background: none; color: var(--ink-3); font: 600 12.5px/1.3 var(--ui); cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.vote-btn .icon { width: 13px; height: 13px; }
+.vote-btn:hover { color: var(--pencil); border-color: var(--rule-strong); }
+.vote-btn[aria-pressed="true"] { color: var(--pencil); border-color: var(--pencil); background: var(--sheet); }
+.vote-btn:focus-visible { border-radius: 7px; }
+.vote-why { padding: 6px 9px; font-size: 13px; }
+
+.feedback { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--rule); scroll-margin-top: 88px; }
+.feedback h3 { margin: 0; color: var(--ink); font: 600 15px/1.35 var(--ui); }
+.feedback-marks { margin: 4px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.rating { min-width: 0; margin: 18px 0 0; padding: 0; border: 0; }
+.rating legend, .field-label { padding: 0; color: var(--ink); font-size: 13.5px; font-weight: 600; }
+.rating-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+.rating-scale label { position: relative; display: block; }
+.rating-scale input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rating-scale .box {
+  display: flex; align-items: center; justify-content: center; height: 36px;
+  border: 1px solid var(--rule-strong); border-radius: 8px;
+  color: var(--ink-2); font: 600 14px/1 var(--ui); font-variant-numeric: tabular-nums;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.rating-scale label:hover .box { border-color: var(--pencil); color: var(--pencil); }
+.rating-scale input:checked + .box { border-color: var(--pencil); background: var(--pencil); color: var(--sheet); }
+.rating-scale input:focus-visible + .box { outline: 2px solid var(--pencil); outline-offset: 2px; }
+.rating-ends { display: flex; justify-content: space-between; margin: 5px 0 0; color: var(--ink-3); font-size: 12.5px; }
+.field-label { display: block; margin-top: 16px; }
+.optional { color: var(--ink-3); font-weight: 400; }
+.feedback-fine { margin: 14px 0 0; color: var(--ink-3); font-size: 12.5px; }
+.feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
+.button.send { background: var(--pencil); color: var(--sheet); }
+.button.send:hover:not(:disabled) { background: color-mix(in srgb, var(--pencil) 84%, var(--ink)); }
+.feedback-state { color: var(--ink-3); font-size: 13px; }
+.feedback-state.is-sent { color: var(--pencil); font-weight: 600; }
+.feedback-state.is-error { color: var(--proof); }
+.status .jump { margin-top: 6px; gap: 4px; }
+.status .jump .icon { width: 14px; height: 14px; transform: rotate(90deg); }
+
 /* ---------- empty state ---------- */
 .legend { color: var(--ink-2); font-size: 14px; }
 .legend-intro { margin: 0 0 18px; color: var(--ink); }

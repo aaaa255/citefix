@@ -37,7 +37,17 @@ Put keys in `.env` (copy `.env.example`):
 | `S2_API_KEY` | Optional; Semantic Scholar is skipped without it. |
 | `CROSSREF_MAILTO` | Optional contact address for Crossref's polite pool. |
 
-For a public deployment (see `render.yaml` and `Dockerfile`), `CITEFIX_PER_IP_PER_HOUR` and `CITEFIX_DAILY_LIMIT` cap how many checks visitors can run.
+For a public deployment (see `render.yaml` and `Dockerfile`), `CITEFIX_PER_IP_PER_HOUR` (40 in the Dockerfile, since a class on one campus network shares an address) and `CITEFIX_DAILY_LIMIT` (200) cap how many checks visitors can run. At most two checks run at once; a third waits in line and starts when one finishes.
+
+## Tester feedback
+
+After a check, each note asks "Is this right?", and a panel under the notes takes a 1 to 5 rating and a comment. Nothing is sent until the tester presses Send. Each send is printed to the server log as a `FEEDBACK {...}` line, saved as a JSON file under `FEEDBACK_DIR` (default `feedback/`), and, when `FEEDBACK_REPO` (`owner/name`) and `FEEDBACK_GITHUB_TOKEN` (a fine-grained token that can write only that repository's contents) are set, committed to that private repository. That last copy matters on a free instance, which loses its disk when it sleeps.
+
+```bash
+python eval/feedback_report.py path/to/citefix-feedback   # or a saved server log
+```
+
+The report is Markdown: how often each kind of verdict was marked right, per deployed version, every note marked wrong with the tester's reason, and every comment. The plan for testing with classmates is in [docs/user-testing.zh-CN.md](docs/user-testing.zh-CN.md).
 
 ## How it was tested
 

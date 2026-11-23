@@ -1,5 +1,7 @@
 # Render Blueprint. On https://dashboard.render.com choose New > Blueprint, pick this repository,
-# and enter the two keys when Render asks for them. Free instances sleep after 15 idle minutes.
+# and enter the keys when Render asks for them. Free instances sleep after 15 idle minutes.
+# FEEDBACK_REPO ("owner/name" of a private repository) and FEEDBACK_GITHUB_TOKEN (a fine-grained token
+# that can write only that repository's contents) keep tester feedback; leave them empty to skip that.
 services:
   - type: web
     name: citefix
@@ -11,4 +13,8 @@ services:
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: OPENALEX_API_KEY
+        sync: false
+      - key: FEEDBACK_REPO
+        sync: false
+      - key: FEEDBACK_GITHUB_TOKEN
         sync: false

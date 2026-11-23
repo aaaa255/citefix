@@ -3,9 +3,11 @@
 GET  /             the page (citefix/web/)
 GET  /api/example  the example passage
 POST /api/review   {"text": ..., "repair": true} -> a stream of JSON lines, one event per line
+POST /api/feedback a tester's votes and comments on one check (see feedback.py)
 
 For a public deployment, set CITEFIX_PER_IP_PER_HOUR and CITEFIX_DAILY_LIMIT (0 or unset means no limit)
 and CITEFIX_TRUST_PROXY=1 when a proxy in front of the app sets X-Forwarded-For.
+At most two checks run at once; a third waits for a free slot (sending "queued" events) for up to MAX_WAIT_S.
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import llm
+from . import feedback, llm
 from .review import review_passage
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -35,6 +37,8 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self' https://fonts.go
        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 MAX_CHARS = 20_000
 _running = threading.BoundedSemaphore(2)  # at most two checks at once
+MAX_WAIT_S = 180  # how long a check waits for a free slot before giving up
+WAIT_POLL_S = 10.0  # how often a waiting check tells the browser it is still waiting
 RECORD: Path | None = None  # dev option: save each check's events here
 REPLAY: Path | None = None  # dev option: answer every check with these recorded events
 PER_IP_PER_HOUR = int(os.environ.get("CITEFIX_PER_IP_PER_HOUR") or 0)
@@ -43,16 +47,17 @@ TRUST_PROXY = os.environ.get("CITEFIX_TRUST_PROXY") == "1"
 
 
 class _Quota:
-    """Caps checks per visitor per hour and per day overall, so a public demo cannot run up the API bill."""
+    """Caps requests per visitor per hour and per day overall, so a public demo cannot run up the API bill."""
 
-    def __init__(self) -> None:
+    def __init__(self, per_ip_per_hour: int, daily: int, noun: tuple[str, str]) -> None:
+        self.per_ip_per_hour, self.daily, self.noun = per_ip_per_hour, daily, noun  # noun: (singular, plural)
         self._lock = threading.Lock()
         self._by_ip: dict[str, list[float]] = {}
         self._day = ""
         self._today = 0
 
     def take(self, ip: str) -> str | None:
-        """Count one check for this address; return a message instead when a limit is reached."""
+        """Count one request for this address; return a message instead when a limit is reached."""
         now = time.time()
         day = time.strftime("%Y-%m-%d", time.gmtime(now))
         with self._lock:
@@ -60,19 +65,23 @@ class _Quota:
                 self._day, self._today = day, 0
                 self._by_ip.clear()
             recent = [t for t in self._by_ip.get(ip, []) if now - t < 3600]
-            if DAILY_LIMIT and self._today >= DAILY_LIMIT:
-                return ("This public demo has used up today's checks. It resets at midnight UTC; "
+            if self.daily and self._today >= self.daily:
+                return (f"This public demo has used up today's {self.noun[1]}. It resets at midnight UTC; "
                         "you can also run citefix on your own computer.")
-            if PER_IP_PER_HOUR and len(recent) >= PER_IP_PER_HOUR:
-                checks = "check" if PER_IP_PER_HOUR == 1 else "checks"
-                return f"This public demo allows {PER_IP_PER_HOUR} {checks} an hour from one address. Please try again later."
+            if self.per_ip_per_hour and len(recent) >= self.per_ip_per_hour:
+                what = self.noun[0] if self.per_ip_per_hour == 1 else self.noun[1]
+                return (f"This public demo allows {self.per_ip_per_hour} {what} an hour from one address. "
+                        "Please try again later.")
             recent.append(now)
             self._by_ip[ip] = recent
             self._today += 1
             return None
 
 
-QUOTA = _Quota()
+QUOTA = _Quota(PER_IP_PER_HOUR, DAILY_LIMIT, ("check", "checks"))
+# Generous per address because a class on one campus network shares an IP; 500 a day stays inside
+# GitHub's limit on commits made through its API.
+FEEDBACK_QUOTA = _Quota(120, 500, ("feedback submission", "feedback submissions"))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -95,7 +104,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain; charset=utf-8")
 
     def do_POST(self) -> None:
-        if self.path.split("?", 1)[0] != "/api/review":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/feedback":
+            return self._feedback()
+        if path != "/api/review":
             return self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain; charset=utf-8")
         length = int(self.headers.get("Content-Length") or 0)
         if length > MAX_CHARS * 4:
@@ -113,13 +125,7 @@ class Handler(BaseHTTPRequestHandler):
             over = QUOTA.take(self._client_ip())
             if over:
                 return self._send_json(HTTPStatus.TOO_MANY_REQUESTS, {"message": over})
-        if not _running.acquire(blocking=False):
-            return self._send_json(HTTPStatus.SERVICE_UNAVAILABLE,
-                                   {"message": "Two checks are already running. Try again in a minute."})
-        try:
-            self._stream(text, bool(request.get("repair", True)))
-        finally:
-            _running.release()
+        self._stream(text, bool(request.get("repair", True)))
 
     def _stream(self, text: str, repair: bool) -> None:
         self.send_response(HTTPStatus.OK)
@@ -128,32 +134,51 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
         lock, connected = threading.Lock(), [True]
-        started = time.monotonic()
-        recording = RECORD.open("w", encoding="utf-8") if RECORD else None
+        recording, started = None, time.monotonic()
 
-        def emit(kind: str, data: dict) -> None:
+        def emit(kind: str, data: dict) -> bool:
+            """Send one event; returns False once the browser has gone away."""
             event = {"type": kind, **data}
             line = (json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8")
             with lock:
                 if recording:
                     recording.write(json.dumps({"t": round(time.monotonic() - started, 2), **event},
                                                ensure_ascii=False) + "\n")
-                if not connected[0]:
-                    return
-                try:
-                    self.wfile.write(line)
-                    self.wfile.flush()
-                except OSError:  # the browser went away; finish quietly
-                    connected[0] = False
+                if connected[0]:
+                    try:
+                        self.wfile.write(line)
+                        self.wfile.flush()
+                    except OSError:  # the browser went away; finish quietly
+                        connected[0] = False
+                return connected[0]
 
+        if not self._wait_for_slot(emit):
+            return
         try:
+            started = time.monotonic()  # a recording starts when the check does, not when it began to wait
+            recording = RECORD.open("w", encoding="utf-8") if RECORD else None
             if REPLAY:
                 self._replay(emit)
             else:
                 self._run_check(text, repair, emit, started)
         finally:
+            _running.release()
             if recording:
                 recording.close()
+
+    def _wait_for_slot(self, emit) -> bool:
+        """Take one of the check slots, telling the browser while it waits; False if it gave up."""
+        if _running.acquire(blocking=False):
+            return True
+        waited = 0.0
+        while waited < MAX_WAIT_S:
+            if not emit("queued", {"text": "Two other checks are running. Yours starts as soon as one finishes."}):
+                return False  # nobody is waiting for this one any more
+            if _running.acquire(timeout=WAIT_POLL_S):
+                return True
+            waited += WAIT_POLL_S
+        emit("error", {"message": "citefix is busy right now. Please try again in a few minutes."})
+        return False
 
     def _replay(self, emit) -> None:
         """Dev option: play back a recorded check at its original pace, clearly labelled."""
@@ -181,6 +206,26 @@ class Handler(BaseHTTPRequestHandler):
             emit("error", {"message": f"The language model could not be used. {err}"})
         except Exception as err:  # keep the stream well-formed whatever happens
             emit("error", {"message": f"Something went wrong on the server: {err}"})
+
+    def _feedback(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length < 0:
+            return self._send_json(HTTPStatus.BAD_REQUEST, {"message": "The feedback could not be read."})
+        if length > feedback.MAX_BYTES:
+            return self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"message": "The feedback is too long."})
+        over = FEEDBACK_QUOTA.take(self._client_ip())
+        if over:
+            return self._send_json(HTTPStatus.TOO_MANY_REQUESTS, {"message": over})
+        try:
+            record = feedback.clean(json.loads(self.rfile.read(length) or b"{}"))
+        except feedback.FeedbackError as err:
+            return self._send_json(HTTPStatus.BAD_REQUEST, {"message": str(err)})
+        except ValueError:
+            return self._send_json(HTTPStatus.BAD_REQUEST, {"message": "The feedback could not be read."})
+        self._send_json(HTTPStatus.OK, {"id": record["id"], "saved": feedback.save(record)})
 
     def _client_ip(self) -> str:
         if TRUST_PROXY:

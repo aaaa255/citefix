@@ -6,7 +6,19 @@ English: [README.md](README.md)
 
 线上地址：https://citefix-g7nq.onrender.com
 
-仓库里的 `render.yaml` 和 `Dockerfile` 就是 Render 用的配置：只用标准库，不用安装依赖，端口取平台给的 `PORT`。在 Render 上新建 Blueprint，选这个仓库，按提示填 `DEEPSEEK_API_KEY` 和 `OPENALEX_API_KEY`。免费实例闲置 15 分钟会休眠，下次打开要等大约一分钟。公网版默认限流：每个访问者每小时 10 次检查，全站每天 200 次，可以用环境变量 `CITEFIX_PER_IP_PER_HOUR`、`CITEFIX_DAILY_LIMIT` 调整。
+仓库里的 `render.yaml` 和 `Dockerfile` 就是 Render 用的配置：只用标准库，不用安装依赖，端口取平台给的 `PORT`。在 Render 上新建 Blueprint，选这个仓库，按提示填 `DEEPSEEK_API_KEY` 和 `OPENALEX_API_KEY`。免费实例闲置 15 分钟会休眠，下次打开要等大约一分钟。公网版默认限流：每个 IP 每小时 40 次检查（同一个校园网的同学共用一个 IP），全站每天 200 次，可以用环境变量 `CITEFIX_PER_IP_PER_HOUR`、`CITEFIX_DAILY_LIMIT` 调整。同时最多跑 2 个检查，第 3 个会排队，等前面的跑完自动开始（最多等 3 分钟）。
+
+## 同学试用和反馈
+
+检查跑完后，每条结论下面有"Is this right? Yes / No"，选 No 可以写一句哪里不对；结论下方还有一个反馈区，可以打 1–5 分、写评论、留名字（可不填）。同学点 Send feedback 之前什么都不会发送。
+
+每条反馈会存三份：Render 日志里的一行 `FEEDBACK {...}`；`FEEDBACK_DIR` 下的一个 JSON 文件（本地默认 `feedback/`，已写进 `.gitignore`）；设置了 `FEEDBACK_REPO` 和 `FEEDBACK_GITHUB_TOKEN` 时，再提交一份到那个私有 GitHub 仓库。免费实例休眠会清空磁盘，所以线上一定要配第三份。
+
+```powershell
+python eval\feedback_report.py ..\citefix-feedback
+```
+
+会输出一份 Markdown 报告：每类结论被标为"对"的比例（按部署版本分开）、所有被标为"不对"的条目和原因、所有评论。试用的准备步骤、发给同学的说明和整理方法见 [docs/user-testing.zh-CN.md](docs/user-testing.zh-CN.md)。
 
 （Hugging Face 现在只有 Static Space 免费，跑不了 Python 后端，所以没用它。）
 
@@ -73,6 +85,8 @@ python -m unittest discover -s tests
 | `CROSSREF_MAILTO` | 你的邮箱，Crossref 会把带联系邮箱的请求放进单独的通道。要不要留由你决定，默认不发送 |
 | `CITEFIX_JUDGE_MODEL` / `CITEFIX_AGENT_MODEL` | 默认都是 `deepseek-flash`，可以改成 `deepseek-v4-pro` |
 | `CITEFIX_JUDGE_EFFORT` / `CITEFIX_AGENT_EFFORT` | DeepSeek 的思考强度，默认 `low`；可选 `none`、`low`、`high`、`max` |
+| `FEEDBACK_REPO` / `FEEDBACK_GITHUB_TOKEN` | 保存同学反馈的私有仓库（`owner/name`）和只能写这个仓库内容的 fine-grained token。不设就只存日志和本地文件 |
+| `FEEDBACK_DIR` | 反馈 JSON 文件的目录，默认 `feedback/`；Docker 里是 `/tmp/citefix-feedback` |
 
 ## 测试记录
 
@@ -121,7 +135,7 @@ python -m unittest discover -s tests
 - [x] 第 3 步：不支持时找替代文献的 agent
 - [x] 网页界面，实时显示 agent 的检索过程
 - [ ] 用更难的数据测试：同学论文里的真实引用、让大模型写的带引用段落
-- [ ] 找同学试用，改进，再测
+- [ ] 找同学试用，改进，再测（反馈功能和试用说明已就绪，见 `docs/user-testing.zh-CN.md`）
 - [ ] 部署、录视频、写 Devpost 页面
 
 ## 致谢与复用

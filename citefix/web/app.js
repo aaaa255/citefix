@@ -9,6 +9,11 @@ const ui = {
   run: $('run'), example: $('example'), edit: $('edit'),
   status: $('status'), progress: $('progress'), notes: $('notes'), legend: $('legend'), usage: $('usage'),
 };
+const fb = {
+  panel: $('feedback'), marks: $('fb-marks'), comment: $('fb-comment'), tester: $('fb-tester'),
+  send: $('fb-send'), state: $('fb-state'),
+};
+const TESTER_KEY = 'citefix.tester';
 const narrow = window.matchMedia('(max-width: 960px)');
 
 const ICONS = {
@@ -130,6 +135,7 @@ function showEditor() {
   ui.refs.hidden = true;
   ui.edit.hidden = true;
   ui.notes.hidden = true;
+  fb.panel.hidden = true;
   ui.progress.hidden = true;
   ui.legend.hidden = false;
   ui.status.replaceChildren();
@@ -334,7 +340,11 @@ function addPair(item, ref) {
   note.addEventListener('mouseleave', () => hot(item.index, false));
   ui.notes.append(note);
   requestAnimationFrame(() => requestAnimationFrame(() => note.classList.remove('is-new')));
-  const pair = { key, index: item.index, ref, note, verdict, source, body, tone: 'pending', done: false, fix: null };
+  const pair = {
+    key, index: item.index, ref, claim: item.claim || item.sentence, note, verdict, source, body,
+    tone: 'pending', done: false, fix: null,
+    verdictKey: '', quote: '', suggested: '', failed: false, votable: false, vote: null, why: '', // for feedback
+  };
   current.pairs.set(key, pair);
   const known = current.refs.get(ref);
   if (known) showSource(pair, known);
@@ -357,11 +367,13 @@ function setVerdict(pair, tone, label, iconName) {
   paintClause(pair.index);
 }
 
+/* Called once a note has its final content: it then gets the tester's "Is this right?" row. */
 function finish(pair) {
   if (pair.done) return;
   pair.done = true;
   current.finished += 1;
   if (current.total) setProgress(current.finished / current.total);
+  addVote(pair);
 }
 
 /* ---------- note layout: each note sits beside its sentence, pushed down to avoid overlap ---------- */
@@ -402,8 +414,14 @@ const handlers = {
     ui.status.after(el('p', 'notice is-replay', e.text));
   },
 
+  queued(e) {
+    setStatus(e.text);
+    setProgress(null);
+  },
+
   start(e) {
     current.body = e.body;
+    current.references = e.references;
     showProof();
     renderProof(e.body, []);
     renderReferences(e.references);
@@ -434,23 +452,23 @@ const handlers = {
   note(e) {
     const pair = pairFor(e);
     if (!pair) return;
-    if (e.kind === 'reference_not_found') {
-      setVerdict(pair, 'bad', 'Reference not found', 'cross');
-    } else {
-      setVerdict(pair, 'warn', 'No abstract to check', 'query');
-      finish(pair);
-    }
+    const missing = e.kind === 'reference_not_found';
+    pair.verdictKey = e.kind;
+    if (missing) setVerdict(pair, 'bad', 'Reference not found', 'cross');
+    else setVerdict(pair, 'warn', 'No abstract to check', 'query');
     pair.body.append(clamp(el('p', 'why', e.text), 2));
+    if (!missing) finish(pair); // a missing reference goes on to the agent
   },
 
   support(e) {
     const pair = pairFor(e);
     if (!pair) return;
     const v = SUPPORT[e.verdict] || SUPPORT.insufficient_evidence;
+    pair.verdictKey = e.verdict;
+    pair.quote = e.quote || '';
     setVerdict(pair, v.tone, v.label, v.icon);
     if (e.verdict === 'supported') {
       if (e.quote) pair.body.append(clamp(el('blockquote', 'evidence is-ok', `“${e.quote}”`), 4));
-      finish(pair);
     } else {
       if (e.explanation) pair.body.append(clamp(el('p', 'why', e.explanation), 3));
       if (e.quote) {
@@ -461,6 +479,7 @@ const handlers = {
       }
     }
     if (e.quote && !e.quote_found) pair.body.append(el('p', 'from', 'This quote was not found in the abstract.'));
+    if (e.verdict === 'supported') finish(pair);
   },
 
   agent_start(e) {
@@ -519,6 +538,7 @@ const handlers = {
       actions.append(copyButton('Copy reference', e.paper.apa), linkButton('Open paper', e.paper.url));
       block.append(actions);
       pair.fix = 'replace';
+      pair.suggested = e.paper.apa;
       markInsertion(pair, e.paper.short);
     } else if (e.decision === 'revise_claim' && e.revised_claim) {
       const label = el('p', 'fix-label');
@@ -529,9 +549,11 @@ const handlers = {
       actions.append(copyButton('Copy sentence', e.revised_claim));
       block.append(actions);
       pair.fix = 'rewrite';
+      pair.suggested = e.revised_claim;
     } else {
       block.append(el('p', 'fix-none', 'No supporting paper found.'));
       if (e.explanation) block.append(clamp(el('p', 'why', e.explanation), 2));
+      pair.fix = 'none';
     }
     pair.body.append(block);
     finish(pair);
@@ -540,6 +562,8 @@ const handlers = {
   claim_error(e) {
     const pair = pairFor(e);
     if (!pair) return;
+    pair.failed = true;
+    pair.verdictKey = 'error';
     setVerdict(pair, 'warn', 'This check failed', 'query');
     pair.body.append(clamp(el('p', 'why', e.message), 2));
     finish(pair);
@@ -550,8 +574,13 @@ const handlers = {
   },
 
   done(e) {
+    current.seconds = e.seconds;
     for (const pair of current.pairs.values()) {
-      if (pair.tone === 'pending') setVerdict(pair, 'warn', 'Not checked', 'query');
+      if (pair.tone === 'pending') {
+        pair.failed = true;
+        pair.verdictKey = 'not_checked';
+        setVerdict(pair, 'warn', 'Not checked', 'query');
+      }
       finish(pair);
     }
     const recorded = current.replay ? ' (recorded)' : '';
@@ -575,6 +604,11 @@ const handlers = {
       ui.status.append(el('strong', `is-${tone}`, text));
     });
     ui.status.append('.');
+    const jump = el('button', 'button text jump');
+    jump.type = 'button';
+    jump.append('Rate this check', icon('chevron'));
+    jump.addEventListener('click', jumpToFeedback);
+    ui.status.append(el('br'), jump);
   },
 
   error(e) {
@@ -620,8 +654,12 @@ async function start() {
     setStatus('Paste a passage and its references first, or load the example.', 'warn');
     return;
   }
-  current = { controller: new AbortController(), running: true, replay: false, body: '', refs: new Map(), pairs: new Map(), total: 0, finished: 0 };
+  current = {
+    id: checkId(), controller: new AbortController(), running: true, replay: false, body: '', references: [],
+    refs: new Map(), pairs: new Map(), total: 0, finished: 0, seconds: null, sentId: null,
+  };
   ui.notes.replaceChildren();
+  resetFeedback();
   document.querySelectorAll('.notice').forEach((n) => n.remove());
   ui.usage.textContent = '';
   setRunning(true);
@@ -653,7 +691,143 @@ async function start() {
   } finally {
     current.running = false;
     setRunning(false);
+    showFeedback();
     layoutSoon();
+  }
+}
+
+/* ---------- tester feedback: a mark on each note, then a rating and a comment ---------- */
+
+function checkId() {
+  return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function addVote(pair) {
+  if (pair.failed) return; // a failed or skipped check has nothing to judge
+  const row = el('div', 'vote');
+  row.setAttribute('role', 'group');
+  row.setAttribute('aria-label', `Is the check of [${pair.ref}] right?`);
+  const why = el('input', 'field vote-why');
+  why.type = 'text';
+  why.maxLength = 300;
+  why.placeholder = 'What’s wrong? (optional)';
+  why.setAttribute('aria-label', `What is wrong with the check of [${pair.ref}]`);
+  why.hidden = true;
+  why.addEventListener('input', () => { pair.why = why.value; feedbackChanged(); });
+  const buttons = [['right', 'check', 'Yes'], ['wrong', 'cross', 'No']].map(([value, iconName, label]) => {
+    const button = el('button', 'vote-btn');
+    button.type = 'button';
+    button.dataset.vote = value;
+    button.setAttribute('aria-pressed', 'false');
+    button.append(icon(iconName), label);
+    button.addEventListener('click', () => {
+      pair.vote = pair.vote === value ? null : value;
+      for (const b of buttons) b.setAttribute('aria-pressed', String(pair.vote === b.dataset.vote));
+      why.hidden = pair.vote !== 'wrong';
+      feedbackChanged();
+      layoutSoon();
+    });
+    return button;
+  });
+  row.append(el('span', 'vote-q', 'Is this right?'), ...buttons);
+  pair.body.append(row, why);
+  pair.votable = true;
+}
+
+function refreshMarks() {
+  if (!current) return;
+  const votable = [...current.pairs.values()].filter((p) => p.votable);
+  const marked = votable.filter((p) => p.vote).length;
+  if (!votable.length) fb.marks.textContent = 'Nothing was checked this time, but a comment still helps.';
+  else if (!marked) fb.marks.textContent = 'Mark each note above Yes or No if you can tell whether it is right.';
+  else fb.marks.textContent = `You marked ${marked} of ${plural(votable.length, 'note')}.`;
+}
+
+function setFeedbackState(text, tone) {
+  fb.state.className = tone ? `feedback-state is-${tone}` : 'feedback-state';
+  fb.state.textContent = text;
+}
+
+function feedbackChanged() {
+  refreshMarks();
+  if (!current?.sentId) return;
+  fb.send.disabled = false;
+  fb.send.textContent = 'Send update';
+  setFeedbackState('Changes not sent yet.');
+}
+
+function resetFeedback() {
+  fb.panel.hidden = true;
+  for (const radio of fb.panel.querySelectorAll('input[name="rating"]')) radio.checked = false;
+  fb.comment.value = '';
+  fb.send.disabled = false;
+  fb.send.textContent = 'Send feedback';
+  setFeedbackState('');
+}
+
+function showFeedback() {
+  refreshMarks();
+  fb.panel.hidden = false;
+}
+
+function jumpToFeedback() {
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  fb.panel.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+  fb.panel.querySelector('input[name="rating"]')?.focus({ preventScroll: true });
+}
+
+function feedbackPayload(check) {
+  return {
+    check: check.id,
+    replay: check.replay,
+    seconds: check.seconds,
+    rating: Number(fb.panel.querySelector('input[name="rating"]:checked')?.value) || null,
+    comment: fb.comment.value.trim(),
+    tester: fb.tester.value.trim(),
+    citations: [...check.pairs.values()].map((p) => ({
+      ref: p.ref,
+      claim: p.claim,
+      reference: check.references[p.ref - 1] || '',
+      existence: check.refs.get(p.ref)?.verdict || '',
+      verdict: p.verdictKey,
+      quote: p.quote,
+      fix: p.fix || '',
+      suggested: p.suggested,
+      vote: p.vote,
+      why: p.vote === 'wrong' ? p.why.trim() : '',
+    })),
+  };
+}
+
+async function sendFeedback() {
+  const check = current;
+  if (!check) return;
+  const payload = feedbackPayload(check);
+  if (!payload.citations.some((c) => c.vote) && !payload.rating && !payload.comment) {
+    setFeedbackState('Mark a note right or wrong, choose a rating or write a comment first.', 'error');
+    return;
+  }
+  try { localStorage.setItem(TESTER_KEY, payload.tester); } catch { /* storage blocked: the name is not remembered */ }
+  fb.send.disabled = true;
+  setFeedbackState('Sending…');
+  try {
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || `The server answered with an error (${response.status}).`);
+    if (check !== current) return;
+    check.sentId = data.id;
+    fb.send.textContent = 'Sent';
+    setFeedbackState('Thank you, your feedback was sent.', 'sent');
+  } catch (err) {
+    if (check !== current) return;
+    fb.send.disabled = false;
+    setFeedbackState(err instanceof TypeError
+      ? 'The citefix server could not be reached. Try again in a moment.'
+      : err.message, 'error');
   }
 }
 
@@ -680,6 +854,11 @@ ui.input.addEventListener('keydown', (e) => {
     start();
   }
 });
+fb.send.addEventListener('click', sendFeedback);
+fb.comment.addEventListener('input', feedbackChanged);
+fb.tester.addEventListener('input', feedbackChanged);
+fb.panel.addEventListener('change', (e) => { if (e.target.name === 'rating') feedbackChanged(); });
+try { fb.tester.value = localStorage.getItem(TESTER_KEY) || ''; } catch { /* storage blocked */ }
 window.addEventListener('resize', layoutSoon);
 narrow.addEventListener('change', layoutSoon);
 new ResizeObserver(layoutSoon).observe(ui.proof);

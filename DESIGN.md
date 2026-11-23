@@ -209,8 +209,13 @@ Softly squared paper geometry: the sheet at 14px, notes at 10px (visible only on
 - **Agent trail:** a disclosure that is open while the agent works and collapses to "Agent searched N times" when it finishes; failed sources are named in amber.
 - **Fix:** below a dashed rule, "Cite instead" or "Rewrite the sentence" in Blue Pencil, the reference in Literata, the quote on the pencil wash, the second-check line, and small buttons.
 
+### Tester feedback
+- **Note mark:** under each finished note, "Is this right?" in Slate Note with two quiet toggles, Yes (check) and No (cross). A pressed toggle gets a Blue Pencil outline on the sheet colour: marking a note is the reader's action, so it never takes a verdict ink. No opens a one-line field for the reason.
+- **Panel:** after the notes, below a hairline: "How did citefix do?", how many notes were marked, a five-step rating (Hairline Strong boxes, the chosen one filled with Blue Pencil), a comment, an optional name, the privacy line in Slate Note, and **Send feedback**, the one filled Blue Pencil button inside the sheet. The finished-check status links down to it.
+
 ### Inputs / Fields
 - **Editor:** borderless Literata on the sheet, Blue Pencil caret; focus shows a soft pencil-wash outline 12px out, so the sheet itself is the field.
+- **Form fields** (feedback only): system sans 14px, Hairline Strong border, 8px radius; the border turns Blue Pencil on focus, with the usual ring.
 
 ### Navigation
 - **Bar:** sticky Ink-Blue Shell bar with the wordmark, a one-line purpose in Shell Ink Soft, and the two buttons on the right.
