@@ -53,6 +53,30 @@ References
         <div id="status" class="status" role="status" aria-live="polite"></div>
         <div id="progress" class="progress" hidden><span></span></div>
         <div id="notes" class="notes" hidden></div>
+        <section id="feedback" class="feedback" aria-labelledby="feedback-title" hidden>
+          <h3 id="feedback-title">How did citefix do?</h3>
+          <p id="fb-marks" class="feedback-marks"></p>
+          <fieldset class="rating">
+            <legend>How useful was this check?</legend>
+            <div class="rating-scale">
+              <label><input type="radio" name="rating" value="1"><span class="box">1<span class="visually-hidden">, not useful</span></span></label>
+              <label><input type="radio" name="rating" value="2"><span class="box">2</span></label>
+              <label><input type="radio" name="rating" value="3"><span class="box">3</span></label>
+              <label><input type="radio" name="rating" value="4"><span class="box">4</span></label>
+              <label><input type="radio" name="rating" value="5"><span class="box">5<span class="visually-hidden">, very useful</span></span></label>
+            </div>
+            <p class="rating-ends" aria-hidden="true"><span>Not useful</span><span>Very useful</span></p>
+          </fieldset>
+          <label class="field-label" for="fb-comment">What was wrong, confusing or missing?</label>
+          <textarea id="fb-comment" class="field" rows="3" maxlength="4000"></textarea>
+          <label class="field-label" for="fb-tester">Your name or initials <span class="optional">(optional)</span></label>
+          <input id="fb-tester" class="field" type="text" maxlength="60" autocomplete="nickname">
+          <p class="feedback-fine">Sending shares your marks, rating and comment with the citefix developer, together with the cited sentences and references from this check. Nothing is sent until you press the button.</p>
+          <div class="feedback-actions">
+            <button id="fb-send" class="button send" type="button">Send feedback</button>
+            <span id="fb-state" class="feedback-state" role="status" aria-live="polite"></span>
+          </div>
+        </section>
         <div id="legend" class="legend">
           <p class="legend-intro">Each citation gets a mark in the text and a note in this margin.</p>
           <dl>
