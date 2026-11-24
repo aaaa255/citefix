@@ -30,10 +30,14 @@ class Candidate:
     year: int | None = None
     authors: list[str] = field(default_factory=list)  # full names, written however the source writes them
     doi: str | None = None
-    url: str | None = None
+    url: str | None = None  # the publisher's page when the source knows it, else the source's own record
     venue: str | None = None
     retracted: bool | None = None
     abstract: str | None = None
+    venue_type: str | None = None  # "journal", "conference" or "repository", when the source says
+    volume: str | None = None
+    issue: str | None = None
+    pages: str | None = None  # "1929–1958", or one page or article number such as "e308"
 
 
 class SourceError(Exception):
@@ -185,6 +189,14 @@ _CROSSREF_CONTAINERS = {
     "proceedings", "journal", "journal-issue", "journal-volume", "component",
     "proceedings-series", "book-series", "book-set", "report-series", "grant", "peer-review",
 }
+_CROSSREF_VENUE_TYPES = {"journal-article": "journal", "proceedings-article": "conference",
+                         "posted-content": "repository"}
+
+
+def _pages(first: str | None, last: str | None) -> str | None:
+    if first and last and last != first:
+        return f"{first}–{last}"
+    return first or last or None
 
 
 def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Candidate]:
@@ -192,7 +204,7 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
     params = {
         "query.bibliographic": query,
         "rows": rows,
-        "select": "DOI,title,author,issued,container-title,type,URL,abstract",
+        "select": "DOI,title,author,issued,container-title,type,URL,abstract,volume,issue,page",
     }
     if years:
         params["filter"] = f"from-pub-date:{years[0]},until-pub-date:{years[1]}"
@@ -207,6 +219,7 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
         date_parts = (item.get("issued") or {}).get("date-parts") or [[None]]
         names = [" ".join(p for p in (a.get("given"), a.get("family")) if p) or a.get("name") or ""
                  for a in item.get("author", [])]
+        page = item.get("page") or ""
         found.append(Candidate(
             source="crossref",
             title=title,
@@ -216,44 +229,78 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
             url=item.get("URL"),
             venue=(item.get("container-title") or [None])[0],
             abstract=_clean_markup(item.get("abstract")),
+            venue_type=_CROSSREF_VENUE_TYPES.get(item.get("type")),
+            volume=item.get("volume"),
+            issue=item.get("issue"),
+            pages=(page.replace("-", "–") if page.count("-") == 1 else page) or None,
         ))
     return found
+
+
+_OPENALEX_FIELDS = ("id,doi,display_name,publication_year,authorships,primary_location,is_retracted,"
+                    "abstract_inverted_index,biblio")
+
+
+def _openalex_params(params: dict) -> dict:
+    for env_name, param in (("OPENALEX_API_KEY", "api_key"), ("OPENALEX_MAILTO", "mailto")):
+        if os.environ.get(env_name):
+            params[param] = os.environ[env_name]
+    return params
+
+
+def _printed_name(authorship: dict) -> str:
+    """The author's name as the paper prints it. OpenAlex's name for the person can reorder it
+    ("J. Edward Hu" for "Hu, Edward J."), which garbles the initials in a reference."""
+    raw = (authorship.get("raw_author_name") or "").strip().rstrip("*†‡§0123456789 ")
+    if raw.isupper():  # a few records shout: "HE, KAIMING"
+        raw = raw.title()
+    return raw or (authorship.get("author") or {}).get("display_name") or ""
+
+
+def _openalex_work(work: dict) -> Candidate | None:
+    doi = work.get("doi") or None
+    if doi and doi.startswith("https://doi.org/"):
+        doi = doi[len("https://doi.org/"):]
+    location = work.get("primary_location") or {}
+    venue = location.get("source") or {}
+    biblio = work.get("biblio") or {}
+    names = [_printed_name(a) for a in work.get("authorships") or []]
+    cand = Candidate(
+        source="openalex",
+        title=work.get("display_name") or "",
+        year=work.get("publication_year"),
+        authors=[n for n in names if n],
+        doi=doi,
+        url=location.get("landing_page_url") or work.get("id"),
+        venue=venue.get("display_name"),
+        retracted=work.get("is_retracted"),
+        abstract=_inverted_to_text(work.get("abstract_inverted_index")),
+        venue_type=venue.get("type"),
+        volume=biblio.get("volume"),
+        issue=biblio.get("issue"),
+        pages=_pages(biblio.get("first_page"), biblio.get("last_page")),
+    )
+    return cand if cand.title else None
 
 
 def openalex(query: str, years: Years | None = None, per_page: int = 5) -> list[Candidate]:
     search = normalize(query)  # lower case, so words like AND/OR are not read as operators
     if not search:
         return []
-    params = {
-        "search": search,
-        "per-page": per_page,
-        "select": "id,doi,display_name,publication_year,authorships,primary_location,is_retracted,"
-                  "abstract_inverted_index",
-    }
+    params = {"search": search, "per-page": per_page, "select": _OPENALEX_FIELDS}
     if years:
         params["filter"] = f"publication_year:{years[0]}-{years[1]}"
-    for env_name, param in (("OPENALEX_API_KEY", "api_key"), ("OPENALEX_MAILTO", "mailto")):
-        if os.environ.get(env_name):
-            params[param] = os.environ[env_name]
-    data = _json(_get("https://api.openalex.org/works?" + urllib.parse.urlencode(params), "openalex"))
-    found = []
-    for work in data.get("results", []):
-        doi = work.get("doi") or None
-        if doi and doi.startswith("https://doi.org/"):
-            doi = doi[len("https://doi.org/"):]
-        names = [(a.get("author") or {}).get("display_name") or "" for a in work.get("authorships") or []]
-        found.append(Candidate(
-            source="openalex",
-            title=work.get("display_name") or "",
-            year=work.get("publication_year"),
-            authors=[n for n in names if n],
-            doi=doi,
-            url=work.get("id"),
-            venue=((work.get("primary_location") or {}).get("source") or {}).get("display_name"),
-            retracted=work.get("is_retracted"),
-            abstract=_inverted_to_text(work.get("abstract_inverted_index")),
-        ))
-    return [c for c in found if c.title]
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(_openalex_params(params))
+    return [c for c in map(_openalex_work, _json(_get(url, "openalex")).get("results", [])) if c]
+
+
+def openalex_doi(doi: str) -> list[Candidate]:
+    """The work with this DOI, or nothing. Fetching one work costs no OpenAlex credits; a search does."""
+    url = (f"https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe='/')}?"
+           + urllib.parse.urlencode(_openalex_params({"select": _OPENALEX_FIELDS})))
+    work = _json(_get(url, "openalex"))
+    cand = _openalex_work(work) if work else None
+    return [cand] if cand else []
 
 
 def has_semantic_scholar_key() -> bool:
@@ -319,5 +366,6 @@ def arxiv(text: str, max_results: int = 3, field: str = "ti") -> list[Candidate]
             url=entry.findtext(f"{_ATOM}id"),
             venue="arXiv",
             abstract=" ".join((entry.findtext(f"{_ATOM}summary") or "").split()) or None,
+            venue_type="repository",
         ))
     return [c for c in found if c.title]

@@ -80,8 +80,14 @@ def _surname(name: str) -> str:
 
 
 def _initials(name: str) -> str:
+    """"Hu, Edward J." gives "E. J."; a hyphenated given name keeps its hyphen, "Ming-Wei" giving "M.-W."."""
     given = name.split(",", 1)[1] if "," in name else " ".join(name.split()[:-1])
-    return " ".join(f"{part[0]}." for part in given.replace(".", " ").split() if part[0].isalpha())
+    initials = []
+    for part in given.replace(".-", "-").replace(".", " ").split():
+        letters = [f"{piece[0]}." for piece in part.split("-") if piece and piece[0].isalpha()]
+        if letters:
+            initials.append("-".join(letters))
+    return " ".join(initials)
 
 
 def short_cite(authors: list[str], year: int | None) -> str:
@@ -98,6 +104,19 @@ def short_cite(authors: list[str], year: int | None) -> str:
     return f"({lead}, {year})" if year else f"({lead})"
 
 
+def _published_in(cand: Candidate) -> str | None:
+    """Where the paper appeared, with volume, issue and pages when the index has them:
+    "Journal of Machine Learning Research, 15(1), 1929–1958." or "In <proceedings> (pp. 4171–4186)."."""
+    if not cand.venue:
+        return None
+    venue = cand.venue.rstrip(".")
+    if cand.venue_type == "conference":  # a proceedings "volume" is often just the year, so leave it out
+        pages = f" ({'pp.' if '–' in cand.pages else 'p.'} {cand.pages})" if cand.pages else ""
+        return f"In {venue}{pages}."
+    volume = f"{cand.volume}({cand.issue})" if cand.volume and cand.issue else cand.volume
+    return ", ".join(part for part in (venue, volume, cand.pages) if part) + "."
+
+
 def apa_reference(cand: Candidate) -> str:
     people = [f"{_surname(a)}, {_initials(a)}".rstrip(", ") for a in cand.authors[:20] if a.strip()]
     if len(people) > 1:
@@ -105,8 +124,9 @@ def apa_reference(cand: Candidate) -> str:
     else:
         authors = people[0] if people else "Unknown author"
     parts = [f"{authors} ({cand.year or 'n.d.'}). {cand.title.rstrip('.')}."]
-    if cand.venue:
-        parts.append(f"{cand.venue}.")
+    published_in = _published_in(cand)
+    if published_in:
+        parts.append(published_in)
     if cand.doi:
         parts.append(f"https://doi.org/{cand.doi}")
     elif cand.url:

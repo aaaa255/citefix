@@ -22,6 +22,10 @@ _PAREN_YEAR = re.compile(r"\(((?:19|20)\d{2})[a-z]?(?:,[^)]*)?\)")
 # A bare year, but not one end of a page range (1929–1958) or part of an arXiv id (2010.11929).
 _ANY_YEAR = re.compile(r"(?<![\d–—-])((?:19|20)\d{2})[a-z]?(?![\d–—-]|\.\d)")
 
+# A DOI, bare or inside a doi.org link: "10.", the registrant's number, "/", then a suffix that may hold
+# almost any character, parentheses included (10.1016/S0140-6736(20)30183-5).
+_DOI = re.compile(r"\b10\.\d{4,9}/\S+")
+
 _SURNAME_FIRST = re.compile(r"^([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)?)\s*,")  # "Vaswani, A." / "Ashish Vaswani,"
 _INITIALS_FIRST = re.compile(r"^(?:[A-Z]\.\s*-?\s*)+([A-Z][\w'’-]+)")  # "K. He," / "M.-W. Chang"
 _SURNAME_INITIALS = re.compile(r"^([A-Z][\w'’-]+)\s+[A-Z]{1,3}\s*[,.]")  # "He K, Zhang X" (GB/T)
@@ -35,6 +39,7 @@ class ParsedRef:
     title: str | None
     year: int | None
     first_author: str | None  # surname
+    doi: str | None = None
 
 
 def normalize(text: str) -> str:
@@ -64,6 +69,20 @@ def extract_year(text: str) -> int | None:
     return int(years[-1]) if years else None
 
 
+def extract_doi(text: str) -> str | None:
+    """The first DOI in a reference, without the punctuation that a citation style puts after it."""
+    found = _DOI.search(text)
+    doi = found.group(0) if found else ""
+    while doi:
+        if doi[-1] in ".,;:'\"”’]>":
+            doi = doi[:-1]
+        elif doi[-1] == ")" and doi.count(")") > doi.count("("):
+            doi = doi[:-1]
+        else:
+            break
+    return doi or None
+
+
 def first_author_surname(text: str) -> str | None:
     found = _SURNAME_FIRST.match(text)
     if found:
@@ -83,6 +102,7 @@ def parse_reference(raw: str) -> ParsedRef:
         title=extract_title(text),
         year=extract_year(text),
         first_author=first_author_surname(text),
+        doi=extract_doi(text),
     )
 
 
