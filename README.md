@@ -28,6 +28,14 @@ python -m citefix review examples/passage.txt   # the same check on the command 
 python -m citefix check examples/refs.txt --trace
 ```
 
+The web page is a React app in `frontend/` (Vite, Tailwind CSS, Motion, Lucide). The server serves its build from `frontend/dist`; build it once with Node 20.19 or later:
+
+```bash
+cd frontend && npm install && npm run build
+```
+
+Without a build, the server falls back to the earlier plain-HTML page in `citefix/web/`. The Dockerfile builds the page itself, so Render needs nothing extra. For work on the page, `npm run dev` in `frontend/` serves it at http://localhost:5173 and forwards `/api` to the Python server on port 8765 (see [frontend/README.md](frontend/README.md)).
+
 Put keys in `.env` (copy `.env.example`):
 
 | Variable | |
@@ -77,4 +85,4 @@ Test sets and each round's results are in `eval/`; the round-by-round notes are 
 
 ## Credits
 
-Records from [OpenAlex](https://openalex.org), [Crossref](https://www.crossref.org), [arXiv](https://arxiv.org) and [Semantic Scholar](https://www.semanticscholar.org); judgments by [DeepSeek](https://www.deepseek.com) (`deepseek-flash`); the Literata typeface via Google Fonts.
+Records from [OpenAlex](https://openalex.org), [Crossref](https://www.crossref.org), [arXiv](https://arxiv.org) and [Semantic Scholar](https://www.semanticscholar.org); judgments by [DeepSeek](https://www.deepseek.com) (`deepseek-flash`). The page is built with [React](https://react.dev), [Vite](https://vite.dev), [Tailwind CSS](https://tailwindcss.com), [Motion](https://motion.dev) and [Lucide](https://lucide.dev) icons, and set in the Geist and Literata typefaces, self-hosted from [Fontsource](https://fontsource.org) (the classic page loads Literata from Google Fonts).

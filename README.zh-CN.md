@@ -6,7 +6,7 @@ English: [README.md](README.md)
 
 线上地址：https://citefix-g7nq.onrender.com
 
-仓库里的 `render.yaml` 和 `Dockerfile` 就是 Render 用的配置：只用标准库，不用安装依赖，端口取平台给的 `PORT`。在 Render 上新建 Blueprint，选这个仓库，按提示填 `DEEPSEEK_API_KEY` 和 `OPENALEX_API_KEY`。免费实例闲置 15 分钟会休眠，下次打开要等大约一分钟。公网版默认限流：每个 IP 每小时 40 次检查（同一个校园网的同学共用一个 IP），全站每天 200 次，可以用环境变量 `CITEFIX_PER_IP_PER_HOUR`、`CITEFIX_DAILY_LIMIT` 调整。同时最多跑 2 个检查，第 3 个会排队，等前面的跑完自动开始（最多等 3 分钟）。
+仓库里的 `render.yaml` 和 `Dockerfile` 就是 Render 用的配置：Dockerfile 先用 Node 构建 `frontend/` 里的网页，再放进 Python 镜像；Python 部分只用标准库，不用安装依赖，端口取平台给的 `PORT`。在 Render 上新建 Blueprint，选这个仓库，按提示填 `DEEPSEEK_API_KEY` 和 `OPENALEX_API_KEY`。免费实例闲置 15 分钟会休眠，下次打开要等大约一分钟。公网版默认限流：每个 IP 每小时 40 次检查（同一个校园网的同学共用一个 IP），全站每天 200 次，可以用环境变量 `CITEFIX_PER_IP_PER_HOUR`、`CITEFIX_DAILY_LIMIT` 调整。同时最多跑 2 个检查，第 3 个会排队，等前面的跑完自动开始（最多等 3 分钟）。
 
 ## 同学试用和反馈
 
@@ -53,6 +53,14 @@ python -m citefix review examples\passage.txt
 ```powershell
 python -m citefix serve
 ```
+
+网页是 `frontend/` 里的 React 应用（Vite、Tailwind CSS、Motion、Lucide）。服务器提供它在 `frontend/dist` 里的构建结果，第一次要先用 Node（20.19 或更新）构建一次：
+
+```powershell
+cd frontend; npm install; npm run build
+```
+
+没有构建结果时，服务器会退回 `citefix/web/` 里原来的纯 HTML 页面。Render 部署时 Dockerfile 会自己构建，不用额外操作。改网页时在 `frontend/` 里运行 `npm run dev`，页面在 http://localhost:5173 ，`/api` 会转发给 8765 端口的 Python 服务器（详见 [frontend/README.md](frontend/README.md)）。
 
 然后打开 http://localhost:8765 ，点 **Load example**，再点 **Check citations**。正文会像论文校样一样被标注：绿色直线表示支持，琥珀色点线表示部分支持或无法判断，红色波浪线表示不支持或查无此文，蓝色插入符后面是 agent 找到的新文献。插入符只在原引文查无此文或不支持、且新文献被核对为完全支持时出现；agent 找到的其他文献在页边写成 "Possible source"，要自己核对。一句话里有几处引用时，每个编号按自己的结论着色。每条引用的结论写在右边页边，和它所在的句子对齐。
 
