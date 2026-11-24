@@ -361,15 +361,20 @@ function addPair(item, ref) {
   const verdict = el('span', 'note-verdict');
   verdict.append(el('span', 'pulse'), 'Checking…');
   head.append(el('span', 'note-ref', `[${ref}]`), verdict);
+  // The start of the checked sentence, shown where the number alone cannot tell notes apart: on narrow screens, where
+  // the notes stack below the text, and for a number cited in more than one sentence, whose later notes get pushed down.
+  const sentence = item.sentence || item.claim || '';
+  const said = el('p', 'note-sentence', sentence);
+  said.title = sentence;
   const source = el('p', 'note-source');
   const body = el('div', 'note-body');
-  note.append(head, source, body);
+  note.append(head, said, source, body);
   note.addEventListener('mouseenter', () => hot(item.index, true));
   note.addEventListener('mouseleave', () => hot(item.index, false));
   ui.notes.append(note);
   requestAnimationFrame(() => requestAnimationFrame(() => note.classList.remove('is-new')));
   const pair = {
-    key, index: item.index, ref, claim: item.claim || item.sentence, note, verdict, source, body,
+    key, index: item.index, ref, refs: item.refs, sentence, claim: item.claim || item.sentence, note, verdict, source, body,
     tone: 'pending', done: false, fix: null,
     verdictKey: '', quote: '', suggested: '', failed: false, votable: false, vote: null, why: '', // for feedback
   };
@@ -407,6 +412,18 @@ function secondCheck(pair, e) {
     ? 'A separate check finds this abstract only partly supports your sentence.'
     : 'A separate check agrees this abstract supports your sentence.');
   return lines.join(' ');
+}
+
+/* The agent rewrites the claim, which carries no citation numbers; the sentence's own numbers go back in before its last stop. */
+function withMarkers(text, pair) {
+  const markers = [...pair.sentence.matchAll(MARKER)]
+    .filter((m) => expandRefs(m[1]).some((ref) => pair.refs.includes(ref)))
+    .map((m) => m[0]);
+  const missing = [...new Set(markers)].filter((m) => !text.includes(m));
+  if (!missing.length) return text;
+  const stop = text.search(/[.!?]["”’]*\s*$/);
+  const cite = missing.join(', ');
+  return stop === -1 ? `${text} ${cite}` : `${text.slice(0, stop)} ${cite}${text.slice(stop)}`;
 }
 
 /* Called once a note has its final content: it then gets the tester's "Is this right?" row. */
@@ -491,6 +508,8 @@ const handlers = {
   citations(e) {
     renderProof(current.body, e.items);
     for (const item of e.items) for (const ref of item.refs) addPair(item, ref);
+    const pairs = [...current.pairs.values()];
+    for (const pair of pairs) pair.note.classList.toggle('is-repeat', pairs.some((other) => other !== pair && other.ref === pair.ref));
     for (const item of e.items) paintClause(item.index);
     current.total = current.pairs.size;
     if (current.total) {
@@ -597,15 +616,16 @@ const handlers = {
       pair.suggested = e.paper.apa;
       if (replace) markInsertion(pair, e.paper.short);
     } else if (e.decision === 'revise_claim' && e.revised_claim) {
+      const rewritten = withMarkers(e.revised_claim, pair);
       const label = el('p', 'fix-label');
       label.append(icon('caret'), 'Rewrite the sentence');
-      block.append(label, el('p', 'fix-text', e.revised_claim));
+      block.append(label, el('p', 'fix-text', rewritten));
       if (e.explanation) block.append(clamp(el('p', 'why', e.explanation), 2));
       const actions = el('div', 'fix-actions');
-      actions.append(copyButton('Copy sentence', e.revised_claim));
+      actions.append(copyButton('Copy sentence', rewritten));
       block.append(actions);
       pair.fix = 'rewrite';
-      pair.suggested = e.revised_claim;
+      pair.suggested = rewritten;
     } else {
       block.append(el('p', 'fix-none', 'No supporting paper found.'));
       if (e.explanation) block.append(clamp(el('p', 'why', e.explanation), 2));

@@ -24,6 +24,7 @@ SAME_PAPER = 0.90  # title similarity at or above this counts as the same paper
 RELATED = 0.75  # below this, the closest record is a different paper
 
 _CJK = re.compile(r"[一-鿿]+")
+_PREPRINT = re.compile(r"\b(?:arxiv|biorxiv|medrxiv|chemrxiv|ssrn|corr|preprint)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -33,6 +34,7 @@ class Scored:
     via: str  # "title": compared with the parsed title; "text": found inside the raw reference
     year_ok: bool | None
     author_ok: bool | None
+    doi_match: bool | None = None  # None when the reference or the record has no DOI
 
 
 @dataclass
@@ -80,21 +82,48 @@ def score(ref: ParsedRef, cand: Candidate) -> Scored:
     author_ok = None
     if ref.first_author and cand.authors:
         author_ok = author_matches(ref.first_author, cand.authors[:3])
-    return Scored(cand, value, via, year_ok, author_ok)
+    doi_match = ref.doi.lower() == cand.doi.lower() if ref.doi and cand.doi else None
+    return Scored(cand, value, via, year_ok, author_ok, doi_match)
+
+
+def _doi_elsewhere(ref: ParsedRef, scored: list[Scored]) -> str | None:
+    """Says so when the reference's DOI leads to a clearly different paper: made-up references
+    often pair a real title with some other paper's DOI."""
+    other = next((s.cand for s in scored if s.doi_match and s.via == "title" and s.score < RELATED), None)
+    if other is None:
+        return None
+    return f"the DOI {ref.doi} leads to a different paper, “{other.title}”" + (f" ({other.year})" if other.year else "")
+
+
+def _ranking(ref: ParsedRef):
+    """How decide() picks a record: the same paper first, then the version of it that the reference cites.
+    A preprint and its published version share a title, and indexes list them in no fixed order."""
+    wants_preprint = bool(_PREPRINT.search(ref.text))
+
+    def rank(s: Scored) -> tuple:
+        same = s.score >= SAME_PAPER  # the version preferences only choose among records of the same paper
+        return (same,
+                same and s.doi_match is True,  # the version with the cited DOI
+                s.year_ok is not False,
+                s.author_ok is not False,
+                same and s.cand.year == ref.year,  # the version from the cited year
+                same and (s.cand.venue_type == "repository") == wants_preprint,  # a preprint only when one is cited
+                s.score)
+    return rank
 
 
 def decide(ref: ParsedRef, scored: list[Scored]) -> tuple[str, str, Scored | None]:
     if not scored:
         return NOT_FOUND, "No index returned any record for this reference.", None
-    best = max(scored, key=lambda s: (s.score >= SAME_PAPER, s.year_ok is not False,
-                                      s.author_ok is not False, s.score))
+    best = max(scored, key=_ranking(ref))
+    wrong_doi = _doi_elsewhere(ref, scored)
     if best.score >= SAME_PAPER:
-        problems = []
+        problems = [wrong_doi] if wrong_doi else []
         if best.year_ok is False:
             problems.append(f"the year is {ref.year} here but {best.cand.year} in {best.cand.source}")
         if best.author_ok is False:
             problems.append(f"first author {ref.first_author} is not among {', '.join(best.cand.authors[:3])}")
-        if best.via == "text" and best.author_ok is not True:
+        if best.via == "text" and best.author_ok is not True and best.doi_match is not True:
             problems.append("the title was only found loosely and the authors could not be confirmed")
         if best.cand.retracted:
             problems.append("the paper is marked as retracted")
@@ -102,9 +131,10 @@ def decide(ref: ParsedRef, scored: list[Scored]) -> tuple[str, str, Scored | Non
             return SUSPICIOUS, "Paper found, but " + "; ".join(problems) + ".", best
         where = f"DOI {best.cand.doi}" if best.cand.doi else (best.cand.url or "no link")
         return VERIFIED, f"Found in {best.cand.source} ({where}).", best
+    tail = f"; {wrong_doi}." if wrong_doi else "."
     if best.score >= RELATED:
-        return SUSPICIOUS, f"The closest record only partly matches the title (similarity {best.score:.2f}).", best
-    return NOT_FOUND, f"No record with a matching title (closest similarity {best.score:.2f}).", best
+        return SUSPICIOUS, f"The closest record only partly matches the title (similarity {best.score:.2f}){tail}", best
+    return NOT_FOUND, f"No record with a matching title (closest similarity {best.score:.2f}){tail}", best
 
 
 def _lookup(ref: ParsedRef, label: str, fn, query: str) -> tuple[Lookup, list[Scored]]:
@@ -136,14 +166,17 @@ def check_reference(raw: str) -> ExistenceResult:
     trace: list[Lookup] = []
     scored: list[Scored] = []
 
-    # Round 1: OpenAlex (and Semantic Scholar, with a key) by title. Crossref allows only one request
-    # per second, so it joins round 1 only when no title could be parsed and the whole string is needed.
+    # Round 1: OpenAlex (and Semantic Scholar, with a key) by title, and OpenAlex by DOI when the reference
+    # gives one, which costs no credits. Crossref allows only one request per second, so it joins round 1
+    # only when no title could be parsed and the whole string is needed.
     if ref.title:
         first = [("openalex", sources.openalex, ref.title)]
         if sources.has_semantic_scholar_key():
             first.append(("semantic_scholar", sources.semantic_scholar, ref.title))
     else:
         first = [("crossref", sources.crossref, ref.text), ("openalex", sources.openalex, ref.text[:200])]
+    if ref.doi:
+        first.append(("openalex-doi", sources.openalex_doi, ref.doi))
     _run(ref, first, trace, scored)
     verdict, reason, match = decide(ref, scored)
 

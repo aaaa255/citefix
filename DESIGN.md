@@ -205,13 +205,14 @@ Softly squared paper geometry: the sheet at 14px, notes at 10px (visible only on
 
 ### Margin notes
 - **Head:** citation number in Slate Note, then the verdict with its icon in its ink.
+- **Sentence line:** the start of the sentence the note checks, in Literata Graphite Soft on one line with an ellipsis. It appears where the number alone cannot tell notes apart: on narrow screens, where the notes stack below the text, and on any screen for a number cited in more than one sentence, since a later note for it may be pushed below its sentence.
 - **Source line:** authors, year and title on one line, truncated with an ellipsis.
 - **Body:** the supporting quote for supported citations; the reason (three lines, click to open) for the rest, with the abstract's sentence behind "What the abstract says".
 - **Agent trail:** a disclosure that is open while the agent works and collapses to "Agent searched N times" when it finishes; failed sources are named in amber.
 - **Fix:** below a dashed rule, a label in Blue Pencil, the reference in Literata, the quote on the pencil wash, the second-check line, and small buttons. The label is one of three:
   - "Cite instead" (caret) only when the citation was not found or does not support the sentence, and the second check says the new paper fully supports it.
   - "Possible source" (query mark) for any other paper the agent found. The second-check line says why it is only possible: the old citation may still be right, or the new abstract only partly supports the sentence.
-  - "Rewrite the sentence".
+  - "Rewrite the sentence". The rewrite keeps the sentence's citation numbers, put back before its final stop, both on screen and when copied.
 
 ### Tester feedback
 - **Note mark:** under each finished note, "Is this right?" in Slate Note with two quiet toggles, Yes (check) and No (cross). A pressed toggle gets a Blue Pencil outline on the sheet colour: marking a note is the reader's action, so it never takes a verdict ink. No opens a two-line field for the reason, up to 1,000 characters, so a source link fits.

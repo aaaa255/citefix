@@ -12,7 +12,7 @@ Language models write convincing references that do not exist, and real referenc
 
 ## How it works
 
-1. **Does the paper exist?** Each reference is parsed (APA, IEEE, ACM or GB/T 7714) and looked up in OpenAlex, Crossref and arXiv. Existence is decided only from those records, never from a language model's memory.
+1. **Does the paper exist?** Each reference is parsed (APA, IEEE, ACM or GB/T 7714) and looked up in OpenAlex, Crossref and arXiv, and by its DOI when it has one. Where a preprint and its published version share a title, citefix shows the version the reference cites: the one with its DOI, else the one from its year, else the published one unless it names a preprint server. Existence is decided only from those records, never from a language model's memory.
 2. **Does it support the sentence?** A model (DeepSeek) finds each citation in the passage, then compares the claim with the cited paper's abstract. To call a citation supported, it has to quote the abstract sentence it relied on, and the quote is checked against the abstract.
 3. **If not, which paper does?** An agent with two tools, `search_papers` and `submit`, looks for a paper that supports the claim. Its suggestion is accepted only if the paper came from its own searches, its quote appears in that paper's abstract, and a separate judging call agrees. When the claim itself is wrong, it suggests rewriting the sentence instead of forcing a citation.
 
@@ -68,9 +68,12 @@ What testing changed:
 - Without a key, everyone on the same IP address shares one small OpenAlex budget. It ran out partway through one test run, and again on the deployed server. Both now use a free key: two reruns gave the same numbers, with no failed lookups.
 - In a simulated user test, an AI agent (Codex) played the user on the live site and marked one note wrong. The cited paper's abstract could not settle the claim, yet citefix said "Cite instead" for a paper that only partly supported it. "Cite instead" now needs a citation that was not found or does not support the sentence, and a replacement the second check says fully supports it. Any other find is shown as a "Possible source", with the reason.
 - The same run found four smaller problems, now fixed. Check citations could be pressed before Load example had filled the editor. The status line named only one of two running searches. Two verdicts in one sentence shared one underline. Reasons for a wrong mark were cut off at 300 characters. Now the example loads with the page, the status line names every search, each citation number takes its own verdict's ink, and reasons can run to 1,000 characters.
+- In the first test with a person, a classmate ran five checks on the live site, one per case: a directly supported claim, a real paper cited for something it never says, a made-up reference, accurate numbers worded as cause and effect, and one reference number behind two opposite sentences. All six notes were marked right, with an average rating of 4.2 out of 5, and the five problems found were in the details. A reference that gave BERT's NAACL 2019 DOI was shown as the 2018 arXiv preprint. References are now also looked up by DOI, and a DOI that leads to a different paper makes a reference suspicious.
+- Suggested references wrote Edward J. Hu as "Hu, J. E.", lacked volume and pages, and linked to OpenAlex. They now keep the names as printed, add volume, issue and pages, and link to the publisher. A rewritten sentence lost its "[1]"; rewrites now keep their numbers. Two notes headed [1] could not be told apart, since on a wide screen the second is pushed down, away from its sentence; a number cited in more than one sentence now shows the start of each sentence in its notes.
+- Rerunning step 1 showed the same version problem without a DOI: the version picked depended on the order OpenAlex returned, which changed between runs. BERT, RAG and ResNet, all cited from conference proceedings, were each matched to an arXiv preprint in some run. citefix now prefers the version from the cited year, then the published one unless the reference names a preprint server. All 28 verdicts stayed the same.
 - Known gap: Chinese-language works are poorly covered by these indexes.
 
-Test sets and every run are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md).
+Test sets and each round's results are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md).
 
 ## Credits
 

@@ -1,6 +1,6 @@
 import unittest
 
-from citefix.textutil import parse_reference, partial_similarity, title_similarity
+from citefix.textutil import extract_doi, parse_reference, partial_similarity, title_similarity
 
 
 class ParseReferenceTest(unittest.TestCase):
@@ -41,6 +41,22 @@ class ParseReferenceTest(unittest.TestCase):
     def test_page_range_is_not_a_year(self):
         ref = parse_reference("Srivastava, N. Dropout. Journal of Machine Learning Research, 15(1), 1929–1958, 2014.")
         self.assertEqual(ref.year, 2014)
+
+
+class DoiTest(unittest.TestCase):
+    def test_doi_link_without_the_final_stop(self):
+        ref = parse_reference("Piwowar, H. A., Day, R. S., & Fridsma, D. B. (2007). Sharing detailed research data is "
+                              "associated with increased citation rate. PLoS ONE, 2(3), e308. "
+                              "https://doi.org/10.1371/journal.pone.0000308.")
+        self.assertEqual(ref.doi, "10.1371/journal.pone.0000308")
+        self.assertEqual(ref.year, 2007)
+
+    def test_parentheses_belong_to_the_doi_only_when_they_pair_up(self):
+        self.assertEqual(extract_doi("Lancet, 395. doi:10.1016/S0140-6736(20)30183-5"), "10.1016/S0140-6736(20)30183-5")
+        self.assertEqual(extract_doi("(NAACL version: 10.18653/v1/N19-1423)."), "10.18653/v1/N19-1423")
+
+    def test_no_doi(self):
+        self.assertIsNone(parse_reference("Vaswani, A. (2017). Attention is all you need. arXiv:1706.03762.").doi)
 
 
 class SimilarityTest(unittest.TestCase):

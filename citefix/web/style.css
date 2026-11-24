@@ -219,6 +219,8 @@ a { color: var(--pencil); text-underline-offset: 0.18em; }
 .note.is-ok .note-verdict { color: var(--stet); }
 .note.is-warn .note-verdict { color: var(--query); }
 .note.is-bad .note-verdict { color: var(--proof); }
+.note-sentence { display: none; margin: 3px 0 0; overflow: hidden; color: var(--ink-2); font: 400 13.5px/1.45 var(--text); white-space: nowrap; text-overflow: ellipsis; }
+.note.is-repeat .note-sentence { display: block; }
 .note-source { margin: 2px 0 0; overflow: hidden; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; }
 .note-source:empty { display: none; }
 .note-source cite, .from cite { font-style: italic; }
@@ -351,6 +353,7 @@ textarea.field { min-height: 5.2em; resize: vertical; }
   .refs-col { grid-row: 3; padding-top: 4px; }
   .refs-col h2 { border-top: 0; }
   .note { position: static; margin-bottom: 4px; }
+  .note-sentence { display: block; }
   .purpose { display: none; }
 }
 @media (max-width: 560px) {
