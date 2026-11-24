@@ -57,7 +57,7 @@ def clean(payload) -> dict:
             "fix": _text(item.get("fix"), 30),
             "suggested": _text(item.get("suggested"), 600),
             "vote": item.get("vote") if item.get("vote") in VOTES else None,
-            "why": _text(item.get("why"), 300),
+            "why": _text(item.get("why"), 1000),
         })
     record = {
         "id": uuid.uuid4().hex[:12],

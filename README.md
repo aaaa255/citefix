@@ -47,7 +47,7 @@ After a check, each note asks "Is this right?", and a panel under the notes take
 python eval/feedback_report.py path/to/citefix-feedback   # or a saved server log
 ```
 
-The report is Markdown: how often each kind of verdict was marked right, per deployed version, every note marked wrong with the tester's reason, and every comment. The plan for testing with classmates is in [docs/user-testing.zh-CN.md](docs/user-testing.zh-CN.md).
+The report is Markdown: how often each kind of verdict was marked right, per deployed version, every note marked wrong with the tester's reason, and every comment. It counts people only: replays, sends signed "test" and testers whose name contains "(AI)" are left out; `--ai` reports the AI testers, and `--all` counts everything. The plan for testing with classmates is in [docs/user-testing.zh-CN.md](docs/user-testing.zh-CN.md).
 
 ## How it was tested
 
@@ -66,6 +66,8 @@ What testing changed:
 - Crossref's response headers say its public pool allows one request per second. Requests now follow the pace a source announces.
 - arXiv timed out during a live run and left the agent with no results. Timeouts no longer retry, Crossref was added as a search source, and failed sources are shown in the agent's trail.
 - Without a key, everyone on the same IP address shares one small OpenAlex budget. It ran out partway through one test run, and again on the deployed server. Both now use a free key: two reruns gave the same numbers, with no failed lookups.
+- In a simulated user test, an AI agent (Codex) played the user on the live site and marked one note wrong. The cited paper's abstract could not settle the claim, yet citefix said "Cite instead" for a paper that only partly supported it. "Cite instead" now needs a citation that was not found or does not support the sentence, and a replacement the second check says fully supports it. Any other find is shown as a "Possible source", with the reason.
+- The same run found four smaller problems, now fixed. Check citations could be pressed before Load example had filled the editor. The status line named only one of two running searches. Two verdicts in one sentence shared one underline. Reasons for a wrong mark were cut off at 300 characters. Now the example loads with the page, the status line names every search, each citation number takes its own verdict's ink, and reasons can run to 1,000 characters.
 - Known gap: Chinese-language works are poorly covered by these indexes.
 
 Test sets and every run are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md).

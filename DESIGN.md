@@ -199,18 +199,22 @@ Softly squared paper geometry: the sheet at 14px, notes at 10px (visible only on
 - **Uncertain:** dotted Query Amber underline, 3px.
 - **Wrong or missing:** wavy Proof Red underline, 1.5px.
 - **Struck citation:** the old number in Slate Note with a 2px Proof Red line through it.
-- **Insertion:** a Blue Pencil caret and the new citation in Literata italic, placed after the sentence, inking in from above.
-- Hovering a marked sentence highlights it and its notes with the pencil wash; clicking scrolls its note into view.
+- **Insertion:** a Blue Pencil caret and the new citation in Literata italic, placed after the sentence, inking in from above. Only a "Cite instead" fix gets one.
+- **Citation numbers:** each number takes its own citation's ink (Stet Green, Query Amber or Proof Red), so a sentence with two citations shows both verdicts while its underline shows the worse one.
+- Hovering a marked sentence highlights it and its notes with the pencil wash; clicking the sentence scrolls its first note into view, and clicking a number scrolls to that number's note and rings it in Blue Pencil for a moment.
 
 ### Margin notes
 - **Head:** citation number in Slate Note, then the verdict with its icon in its ink.
 - **Source line:** authors, year and title on one line, truncated with an ellipsis.
 - **Body:** the supporting quote for supported citations; the reason (three lines, click to open) for the rest, with the abstract's sentence behind "What the abstract says".
 - **Agent trail:** a disclosure that is open while the agent works and collapses to "Agent searched N times" when it finishes; failed sources are named in amber.
-- **Fix:** below a dashed rule, "Cite instead" or "Rewrite the sentence" in Blue Pencil, the reference in Literata, the quote on the pencil wash, the second-check line, and small buttons.
+- **Fix:** below a dashed rule, a label in Blue Pencil, the reference in Literata, the quote on the pencil wash, the second-check line, and small buttons. The label is one of three:
+  - "Cite instead" (caret) only when the citation was not found or does not support the sentence, and the second check says the new paper fully supports it.
+  - "Possible source" (query mark) for any other paper the agent found. The second-check line says why it is only possible: the old citation may still be right, or the new abstract only partly supports the sentence.
+  - "Rewrite the sentence".
 
 ### Tester feedback
-- **Note mark:** under each finished note, "Is this right?" in Slate Note with two quiet toggles, Yes (check) and No (cross). A pressed toggle gets a Blue Pencil outline on the sheet colour: marking a note is the reader's action, so it never takes a verdict ink. No opens a one-line field for the reason.
+- **Note mark:** under each finished note, "Is this right?" in Slate Note with two quiet toggles, Yes (check) and No (cross). A pressed toggle gets a Blue Pencil outline on the sheet colour: marking a note is the reader's action, so it never takes a verdict ink. No opens a two-line field for the reason, up to 1,000 characters, so a source link fits.
 - **Panel:** after the notes, below a hairline: "How did citefix do?", how many notes were marked, a five-step rating (Hairline Strong boxes, the chosen one filled with Blue Pencil), a comment, an optional name, the privacy line in Slate Note, and **Send feedback**, the one filled Blue Pencil button inside the sheet. The finished-check status links down to it.
 
 ### Inputs / Fields

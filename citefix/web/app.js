@@ -39,6 +39,8 @@ const REFERENCE = {
 };
 const SOURCES = { openalex: 'OpenAlex', crossref: 'Crossref', arxiv: 'arXiv', semantic_scholar: 'Semantic Scholar' };
 const TONE_RANK = { ok: 0, pending: 1, warn: 2, bad: 3 };
+// "Cite instead" needs a citation that clearly fails; a paper found for any other one is only a possible source.
+const CLEAR_FAILURE = new Set(['reference_not_found', 'not_supported']);
 const MARKER = /\[(\d+(?:\s*[,–-]\s*\d+)*)\]/g;
 const LIST_NUMBER = /^\s*(?:\[\d+\]|\(\d+\)|\d+[.)])\s+/;
 
@@ -207,6 +209,12 @@ function clauseSpan(text, index) {
     if (m.index > last) span.append(text.slice(last, m.index));
     const marker = el('span', 'marker', m[0]);
     marker.dataset.refs = expandRefs(m[1]).join(',');
+    marker.addEventListener('click', (e) => { // a number leads to its own note, not the sentence's first one
+      const note = noteFor(index, marker.dataset.refs.split(',')[0]);
+      if (!note) return;
+      e.stopPropagation();
+      showNote(note);
+    });
     span.append(marker);
     last = m.index + m[0].length;
   }
@@ -262,6 +270,25 @@ function paintClause(index) {
     if (pair.index === index && TONE_RANK[pair.tone] > TONE_RANK[worst]) worst = pair.tone;
   }
   for (const tone of Object.keys(TONE_RANK)) clause.classList.toggle(`is-${tone}`, tone === worst);
+  // The underline shows the worst verdict; each number also takes its own, so two citations stay apart.
+  for (const marker of clause.querySelectorAll('.marker')) {
+    const pairs = marker.dataset.refs.split(',').map((ref) => current.pairs.get(`${index}-${ref}`)).filter(Boolean);
+    if (!pairs.length) continue;
+    const tone = pairs.reduce((t, p) => (TONE_RANK[p.tone] > TONE_RANK[t] ? p.tone : t), 'ok');
+    for (const t of Object.keys(TONE_RANK)) marker.classList.toggle(`is-${t}`, t === tone);
+    marker.title = pairs.map((p) => `[${p.ref}] ${p.verdict.textContent}`).join('\n');
+  }
+}
+
+function noteFor(index, ref) {
+  return ui.notes.querySelector(`.note[data-sentence="${index}"][data-ref="${ref}"]`);
+}
+
+function showNote(note) {
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  note.scrollIntoView({ block: 'nearest', behavior: still ? 'auto' : 'smooth' });
+  note.classList.add('is-flash');
+  setTimeout(() => note.classList.remove('is-flash'), 1400);
 }
 
 function markInsertion(pair, shortCite) {
@@ -329,6 +356,7 @@ function addPair(item, ref) {
   const key = `${item.index}-${ref}`;
   const note = el('article', 'note is-pending is-new');
   note.dataset.sentence = String(item.index);
+  note.dataset.ref = String(ref);
   const head = el('header', 'note-head');
   const verdict = el('span', 'note-verdict');
   verdict.append(el('span', 'pulse'), 'Checking…');
@@ -365,6 +393,20 @@ function setVerdict(pair, tone, label, iconName) {
   pair.note.classList.add(`is-${tone}`);
   pair.verdict.replaceChildren(icon(iconName), label);
   paintClause(pair.index);
+}
+
+/* The line under a suggested paper: what the second check found and, for a possible source, why it is only that. */
+function secondCheck(pair, e) {
+  const lines = [];
+  if (pair.verdictKey === 'insufficient_evidence') {
+    lines.push(`[${pair.ref}] may still be right: its abstract does not settle this, so check its full text first.`);
+  } else if (pair.verdictKey === 'partially_supported') {
+    lines.push(`[${pair.ref}] partly supports this sentence, so this paper may belong beside it rather than in its place.`);
+  }
+  lines.push(e.check === 'partially_supported'
+    ? 'A separate check finds this abstract only partly supports your sentence.'
+    : 'A separate check agrees this abstract supports your sentence.');
+  return lines.join(' ');
 }
 
 /* Called once a note has its final content: it then gets the tester's "Is this right?" row. */
@@ -407,6 +449,17 @@ function layoutNotes() {
 }
 
 /* ---------- events from the server ---------- */
+
+/* Several agents run at once, so the status line names every citation still being searched for. */
+function showSearching() {
+  const refs = [...new Set([...current.searching].map((key) => current.pairs.get(key)?.ref))]
+    .filter((ref) => ref != null).sort((a, b) => a - b).map((ref) => `[${ref}]`);
+  if (refs.length) {
+    setStatus(`The agent is looking for ${refs.length === 1 ? 'a supporting paper' : 'supporting papers'} for ${listOf(refs)}…`);
+  } else if (current.total) {
+    setStatus(`Checking ${plural(current.total, 'citation')}…`);
+  }
+}
 
 const handlers = {
   replay(e) {
@@ -494,7 +547,8 @@ const handlers = {
     box.addEventListener('toggle', layoutSoon);
     pair.body.append(box);
     pair.agent = { box, head, trail, searches: 0 };
-    setStatus(`The agent is looking for a better source for [${pair.ref}]…`);
+    current.searching.add(pair.key);
+    showSearching();
   },
 
   agent_step(e) {
@@ -522,24 +576,26 @@ const handlers = {
   repair(e) {
     const pair = pairFor(e);
     if (!pair) return;
+    if (current.searching.delete(pair.key)) showSearching();
     if (pair.agent) {
       pair.agent.head.replaceChildren(icon('chevron'), `Agent searched ${plural(pair.agent.searches, 'time')}`);
       pair.agent.box.open = false;
     }
     const block = el('div', 'fix');
     if (e.decision === 'replace' && e.paper) {
+      // Only a full replacement for a citation that clearly fails is marked in the text as the one to cite.
+      const replace = CLEAR_FAILURE.has(pair.verdictKey) && e.check === 'supported';
       const label = el('p', 'fix-label');
-      label.append(icon('caret'), 'Cite instead');
+      label.append(icon(replace ? 'caret' : 'query'), replace ? 'Cite instead' : 'Possible source');
       block.append(label, clamp(el('p', 'fix-ref', e.paper.apa), 3));
       if (e.quote) block.append(clamp(el('blockquote', 'evidence is-fix', `“${e.quote}”`), 3));
-      const verdict = e.check === 'partially_supported' ? 'partly supports' : 'supports';
-      block.append(el('p', 'fix-check', `A separate check agrees this abstract ${verdict} your sentence.`));
+      block.append(el('p', 'fix-check', secondCheck(pair, e)));
       const actions = el('div', 'fix-actions');
       actions.append(copyButton('Copy reference', e.paper.apa), linkButton('Open paper', e.paper.url));
       block.append(actions);
-      pair.fix = 'replace';
+      pair.fix = replace ? 'replace' : 'candidate';
       pair.suggested = e.paper.apa;
-      markInsertion(pair, e.paper.short);
+      if (replace) markInsertion(pair, e.paper.short);
     } else if (e.decision === 'revise_claim' && e.revised_claim) {
       const label = el('p', 'fix-label');
       label.append(icon('caret'), 'Rewrite the sentence');
@@ -562,6 +618,7 @@ const handlers = {
   claim_error(e) {
     const pair = pairFor(e);
     if (!pair) return;
+    if (current.searching.delete(pair.key)) showSearching();
     pair.failed = true;
     pair.verdictKey = 'error';
     setVerdict(pair, 'warn', 'This check failed', 'query');
@@ -590,11 +647,13 @@ const handlers = {
     if (!pairs.length) return;
     const supported = pairs.filter((p) => p.tone === 'ok').length;
     const replaced = pairs.filter((p) => p.fix === 'replace').length;
+    const possible = pairs.filter((p) => p.fix === 'candidate').length;
     const rewrite = pairs.filter((p) => p.fix === 'rewrite').length;
-    const open = pairs.length - supported - replaced - rewrite;
+    const open = pairs.length - supported - replaced - possible - rewrite;
     const parts = [];
     if (supported) parts.push(['ok', `${supported} supported`]);
     if (replaced) parts.push(['fix', `${replaced} with a better source`]);
+    if (possible) parts.push(['fix', `${possible} with a possible source to check`]);
     if (rewrite) parts.push(['fix', `${rewrite} to rewrite`]);
     if (open) parts.push(['bad', `${open} unresolved`]);
     ui.status.className = 'status';
@@ -643,6 +702,7 @@ function setRunning(on) {
 }
 
 async function start() {
+  if (ui.run.disabled) return; // the example is still loading
   if (current && current.running) {
     current.controller.abort();
     return;
@@ -656,7 +716,7 @@ async function start() {
   }
   current = {
     id: checkId(), controller: new AbortController(), running: true, replay: false, body: '', references: [],
-    refs: new Map(), pairs: new Map(), total: 0, finished: 0, seconds: null, sentId: null,
+    refs: new Map(), pairs: new Map(), total: 0, finished: 0, seconds: null, sentId: null, searching: new Set(),
   };
   ui.notes.replaceChildren();
   resetFeedback();
@@ -707,9 +767,9 @@ function addVote(pair) {
   const row = el('div', 'vote');
   row.setAttribute('role', 'group');
   row.setAttribute('aria-label', `Is the check of [${pair.ref}] right?`);
-  const why = el('input', 'field vote-why');
-  why.type = 'text';
-  why.maxLength = 300;
+  const why = el('textarea', 'field vote-why'); // room for a reason and the link that backs it
+  why.rows = 2;
+  why.maxLength = 1000;
   why.placeholder = 'What’s wrong? (optional)';
   why.setAttribute('aria-label', `What is wrong with the check of [${pair.ref}]`);
   why.hidden = true;
@@ -831,18 +891,44 @@ async function sendFeedback() {
   }
 }
 
+/* The example is fetched as soon as the page opens, so Load example rarely has to wait. */
+const exampleLabel = ui.example.textContent;
+let exampleText = null;
+let exampleLoad = null;
+
+function fetchExample() {
+  exampleLoad ||= fetch('/api/example')
+    .then((response) => {
+      if (!response.ok) throw new Error(`The server answered with an error (${response.status}).`);
+      return response.json();
+    })
+    .then((data) => { exampleText = data.text || ''; return exampleText; })
+    .catch((err) => { exampleLoad = null; throw err; }); // the next click tries again
+  return exampleLoad;
+}
+
 async function loadExample() {
-  try {
-    const response = await fetch('/api/example');
-    const data = await response.json();
-    ui.input.value = data.text || '';
-    showEditor();
-    ui.input.focus();
-    ui.input.setSelectionRange(0, 0);
-    ui.input.scrollTop = 0;
-  } catch {
-    setStatus('The example could not be loaded.', 'warn');
+  if (exampleText == null) {
+    // Until the text is in the editor, a check would only find an empty passage.
+    ui.example.disabled = true;
+    ui.run.disabled = true;
+    ui.example.textContent = 'Loading example…';
+    try {
+      await fetchExample();
+    } catch {
+      setStatus('The example could not be loaded.', 'warn');
+      return;
+    } finally {
+      ui.example.textContent = exampleLabel;
+      ui.example.disabled = false;
+      ui.run.disabled = false;
+    }
   }
+  ui.input.value = exampleText;
+  showEditor();
+  ui.input.focus();
+  ui.input.setSelectionRange(0, 0);
+  ui.input.scrollTop = 0;
 }
 
 ui.run.addEventListener('click', start);
@@ -859,6 +945,7 @@ fb.comment.addEventListener('input', feedbackChanged);
 fb.tester.addEventListener('input', feedbackChanged);
 fb.panel.addEventListener('change', (e) => { if (e.target.name === 'rating') feedbackChanged(); });
 try { fb.tester.value = localStorage.getItem(TESTER_KEY) || ''; } catch { /* storage blocked */ }
+fetchExample().catch(() => { /* Load example tries again and says so if it still fails */ });
 window.addEventListener('resize', layoutSoon);
 narrow.addEventListener('change', layoutSoon);
 new ResizeObserver(layoutSoon).observe(ui.proof);

@@ -46,6 +46,10 @@ class CleanTest(unittest.TestCase):
         self.assertNotIn("unknown", first)
         self.assertEqual((second["ref"], second["vote"]), (None, None))
 
+    def test_keeps_a_reason_long_enough_for_a_link(self):
+        record = feedback.clean({"citations": [{"ref": 1, "vote": "wrong", "why": "y" * 1200}]})
+        self.assertEqual(len(record["citations"][0]["why"]), 1000)
+
     def test_drops_numbers_out_of_range(self):
         record = feedback.clean({"rating": 9, "seconds": -1, "comment": "ok"})
         self.assertIsNone(record["rating"])

@@ -1,11 +1,12 @@
 """Summarise tester feedback as Markdown, ready to paste into the test record.
 
-    python eval/feedback_report.py [PATH ...] [--all]
+    python eval/feedback_report.py [PATH ...] [--ai | --all]
 
 Each PATH is a folder of feedback files (default: feedback/; a clone of the private feedback repository
 works too) or a saved server log, where every send is a line containing "FEEDBACK {...}".
-When a check was sent more than once, only its latest send counts. Replayed checks and sends signed
-"test" are left out unless --all is given.
+When a check was sent more than once, only its latest send counts. The report covers people: replayed
+checks, sends signed "test" and testers whose name contains "(AI)" are left out. --ai reports the AI
+testers' checks instead, and --all counts everything.
 """
 
 from __future__ import annotations
@@ -25,8 +26,17 @@ VERDICTS = {
     "reference_not_found": "reference not found",
     "no_abstract": "no abstract to check",
 }
-FIXES = {"replace": "agent suggested another paper", "rewrite": "agent suggested a rewrite",
-         "none": "agent found nothing"}
+FIXES = {"replace": "agent suggested another paper", "candidate": "agent suggested a paper to check",
+         "rewrite": "agent suggested a rewrite", "none": "agent found nothing"}
+LEFT_OUT = {"ai": "by AI testers", "test": "replayed or signed \"test\"", "person": "by people"}
+
+
+def kind(record: dict) -> str:
+    """Who a record is from: 'test' (a replay or a send signed test), 'ai' (a name with (AI)) or 'person'."""
+    tester = (record.get("tester") or "").strip().lower()
+    if record.get("replay") or tester == "test":
+        return "test"
+    return "ai" if "(ai)" in tester else "person"
 
 
 def _records_in(path: Path) -> tuple[list[dict], int]:
@@ -82,13 +92,21 @@ def mean(values: list[int]) -> str:
     return f"{sum(values) / len(values):.1f}" if values else "-"
 
 
-def report(records: list[dict]) -> str:
+def left_out_line(left_out: Counter) -> str:
+    if not left_out:
+        return ""
+    parts = [f"{plural(n, 'check')} {LEFT_OUT[k]}" for k, n in sorted(left_out.items())]
+    hint = "--ai shows the AI testers, --all counts everything" if left_out.get("ai") else "--all counts everything"
+    return f"Left out: {', '.join(parts)} ({hint})."
+
+
+def report(records: list[dict], left_out: Counter | None = None) -> str:
     marked = [(r, c) for r in records for c in r.get("citations", []) if c.get("vote") in ("right", "wrong")]
     ratings = [r["rating"] for r in records if isinstance(r.get("rating"), int)]
     testers = {r.get("tester") or "(no name)" for r in records}
-    lines = ["# Tester feedback", "",
-             f"{plural(len(records), 'check')} with feedback from {plural(len(testers), 'tester')} "
-             f"({', '.join(sorted(testers))}); {plural(len(marked), 'note')} marked right or wrong.", ""]
+    summary = (f"{plural(len(records), 'check')} with feedback from {plural(len(testers), 'tester')} "
+               f"({', '.join(sorted(testers))}); {plural(len(marked), 'note')} marked right or wrong.")
+    lines = ["# Tester feedback", "", " ".join(filter(None, [summary, left_out_line(left_out or Counter())])), ""]
 
     lines += ["## By version", "", "| Version | Checks | Marked notes | Marked right | Mean rating |",
               "|---|---|---|---|---|"]
@@ -142,19 +160,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Summarise tester feedback as Markdown.")
     parser.add_argument("paths", nargs="*", type=Path, default=[ROOT / "feedback"],
                         help="folders of feedback files or saved server logs (default: feedback/)")
-    parser.add_argument("--all", action="store_true", help="also count replayed checks and sends signed 'test'")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--ai", action="store_true", help="report the checks by AI testers (names with '(AI)')")
+    which.add_argument("--all", action="store_true", help="count everything, replays and 'test' sends included")
     args = parser.parse_args(argv)
     missing = [str(p) for p in args.paths if not p.exists()]
     if missing:
         print(f"Not found: {', '.join(missing)}", file=sys.stderr)
         return 1
     records, broken = load(args.paths)
-    if not args.all:
-        records = [r for r in records if not r.get("replay") and (r.get("tester") or "").lower() != "test"]
+    wanted = None if args.all else ("ai" if args.ai else "person")
+    left_out = Counter(kind(r) for r in records if wanted and kind(r) != wanted)
+    if wanted:
+        records = [r for r in records if kind(r) == wanted]
     if not records:
-        print("No feedback to report." + ("" if args.all else " (Replays and 'test' sends are skipped; add --all.)"))
+        print(" ".join(filter(None, ["No feedback to report.", left_out_line(left_out)])))
         return 0
-    print(report(records), end="")
+    print(report(records, left_out), end="")
     if broken:
         print(f"\n{broken} entries could not be read (a log line may have been cut off).", file=sys.stderr)
     return 0

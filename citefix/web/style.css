@@ -160,6 +160,10 @@ a { color: var(--pencil); text-underline-offset: 0.18em; }
 .is-bad.clause, .is-bad.sample { text-decoration-style: wavy; text-decoration-thickness: 1.5px; text-decoration-color: var(--proof); }
 .clause.is-hot { background: var(--pencil-wash); }
 .marker { font-variant-numeric: tabular-nums; }
+/* each number takes its own citation's ink, so two citations in one sentence stay apart */
+.marker.is-ok { color: var(--stet); }
+.marker.is-warn { color: var(--query); }
+.marker.is-bad { color: var(--proof); }
 .marker.is-struck { color: var(--ink-3); text-decoration: line-through 2px var(--proof); }
 .insert {
   display: inline-flex; align-items: baseline; gap: 2px; margin-left: 0.3em;
@@ -206,7 +210,8 @@ a { color: var(--pencil); text-underline-offset: 0.18em; }
   transition: top 0.45s var(--ease), opacity 0.5s var(--ease), transform 0.5s var(--ease), background-color 0.2s;
 }
 .note.is-new { opacity: 0; transform: translateX(12px); }
-.note.is-hot { background: var(--pencil-wash); }
+.note.is-hot, .note.is-flash { background: var(--pencil-wash); }
+.note.is-flash { box-shadow: 0 0 0 2px var(--pencil); } /* singled out even when its sentence's notes are all washed */
 .note-head { display: flex; align-items: center; gap: 9px; }
 .note-ref { color: var(--ink-3); font: 600 12.5px/1 var(--ui); font-variant-numeric: tabular-nums; }
 .note-verdict { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 650; }
@@ -285,7 +290,7 @@ textarea.field { min-height: 5.2em; resize: vertical; }
 .vote-btn:hover { color: var(--pencil); border-color: var(--rule-strong); }
 .vote-btn[aria-pressed="true"] { color: var(--pencil); border-color: var(--pencil); background: var(--sheet); }
 .vote-btn:focus-visible { border-radius: 7px; }
-.vote-why { padding: 6px 9px; font-size: 13px; }
+.field.vote-why { min-height: 0; padding: 6px 9px; font-size: 13px; }
 
 .feedback { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--rule); scroll-margin-top: 88px; }
 .feedback h3 { margin: 0; color: var(--ink); font: 600 15px/1.35 var(--ui); }
