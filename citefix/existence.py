@@ -73,9 +73,20 @@ def author_matches(surname: str, names: list[str]) -> bool:
     return bool(wanted) and any(wanted[-1] in normalize(name).split() for name in names)
 
 
+def _cut_short(ref: ParsedRef, cand: Candidate) -> bool:
+    """The parser can stop a title at a question mark that a subtitle follows ("...for weight loss?
+    A systematic review..."). Then the record's full title starts with the parsed one and appears
+    whole in the reference."""
+    parsed, full = normalize(ref.title or ""), normalize(cand.title)
+    return (len(full.split()) > len(parsed.split()) >= 4 and full.startswith(parsed + " ")
+            and f" {full} " in f" {normalize(ref.text)} ")
+
+
 def score(ref: ParsedRef, cand: Candidate) -> Scored:
     if ref.title:
         value, via = title_similarity(ref.title, cand.title), "title"
+        if value < 1.0 and _cut_short(ref, cand):
+            value = 1.0
     else:
         value, via = partial_similarity(cand.title, ref.text), "text"
     year_ok = None if ref.year is None or cand.year is None else abs(ref.year - cand.year) <= 1
@@ -198,17 +209,41 @@ def check_reference(raw: str) -> ExistenceResult:
                            abstract, abstract_source)
 
 
+def _pubmed(doi: str, title: str, trace: list[Lookup]) -> str | None:
+    """The abstract PubMed holds for this DOI, if its record has the matched paper's title."""
+    step = Lookup(source="pubmed", query=doi)
+    started = time.monotonic()
+    try:
+        found = sources.pubmed_abstract(doi)
+    except Exception as err:  # a failing lookup only means no abstract from here
+        step.error, found = str(err) or type(err).__name__, None
+    step.ms = int((time.monotonic() - started) * 1000)
+    if found:
+        step.results, step.best_title = 1, found[0]
+        step.best_score = round(title_similarity(found[0], title), 3)
+    trace.append(step)
+    return found[1] if found and step.best_score >= SAME_PAPER else None
+
+
 def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Lookup]) -> tuple[str | None, str | None]:
-    """The matched paper's abstract, from whichever index has one; arXiv by title as a last resort."""
+    """The matched paper's abstract, from whichever index has one, then from PubMed by DOI;
+    arXiv by title as a last resort."""
     if not match or match.score < SAME_PAPER:
         return None, None
     year = match.cand.year
-    same = [s for s in scored if s.score >= SAME_PAPER and s.cand.abstract
-            and (year is None or s.cand.year is None or abs(s.cand.year - year) <= 1)]
+    versions = [s for s in (match, *scored) if s.score >= SAME_PAPER
+                and (year is None or s.cand.year is None or abs(s.cand.year - year) <= 1)]
+    same = [s for s in versions if s.cand.abstract]
     if same:
         best = max(same, key=lambda s: s.score)
         return best.cand.abstract, best.cand.source
     title = match.cand.title
+    # PubMed has no arXiv DOIs (10.48550/...), so those are not worth asking about.
+    dois = [s.cand.doi for s in versions if s.cand.doi and not s.cand.doi.lower().startswith("10.48550/")]
+    for doi in list(dict.fromkeys(d.lower() for d in dois))[:2]:
+        abstract = _pubmed(doi, title, trace)
+        if abstract:
+            return abstract, "pubmed"
     if any(step.source == "arxiv" and normalize(step.query) == normalize(title) for step in trace):
         return None, None  # already asked arXiv for exactly this title
     try:

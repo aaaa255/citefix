@@ -178,6 +178,19 @@ class SplitPassageTest(unittest.TestCase):
         self.assertEqual(body, "Claim one [1].")
         self.assertEqual(refs, ["[1] A. (2020). T.", "[2] B. (2021). U."])
 
+    def test_heading_at_the_end_of_the_last_sentence(self):
+        body, refs = split_passage("Intro. Claim two [2]. References\n[1] A. (2020). T.\n[2] B. (2021). U.")
+        self.assertEqual(body, "Intro. Claim two [2].")
+        self.assertEqual(refs, ["[1] A. (2020). T.", "[2] B. (2021). U."])
+
+    def test_heading_at_the_end_before_an_unnumbered_list(self):
+        _, refs = split_passage("Claim (Smith, 2020). References:\nSmith, J. (2020). A title. Journal, 1.")
+        self.assertEqual(refs, ["Smith, J. (2020). A title. Journal, 1."])
+
+    def test_the_word_at_the_end_of_prose_is_not_a_heading(self):
+        text = "We read them all. References\nThis is more of the passage, not a list."
+        self.assertEqual(split_passage(text), (text, []))
+
     def test_chinese_heading(self):
         _, refs = split_passage("正文。\n参考文献\n周志华. 机器学习[M]. 2016.")
         self.assertEqual(refs, ["周志华. 机器学习[M]. 2016."])

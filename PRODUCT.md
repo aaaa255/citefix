@@ -24,7 +24,7 @@ Checking that references exist is already common (CheckIfExist, check-hallucinat
 
 ## Operating Context
 
-Used on a laptop while revising a manuscript. Input is pasted text: the body, a line that says References, then one reference per line (APA, IEEE, ACM or GB/T 7714). Records come from OpenAlex, Crossref, arXiv and Semantic Scholar; judgments come from DeepSeek (`deepseek-flash`). The demo is recorded for the Buildathon, whose deadline is 2026-12-15 23:45 EST.
+Used on a laptop while revising a manuscript. Input is pasted text: the body, a line that says References, then one reference per line (APA, IEEE, ACM or GB/T 7714). Records come from OpenAlex, Crossref, arXiv and Semantic Scholar, with abstracts also from PubMed; judgments come from DeepSeek (`deepseek-flash`). The demo is recorded for the Buildathon, whose deadline is 2026-12-15 23:45 EST.
 
 ## Capabilities and Constraints
 

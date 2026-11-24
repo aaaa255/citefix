@@ -17,10 +17,16 @@ from .existence import NOT_FOUND, SAME_PAPER, ExistenceResult, check_reference
 from .repair import RepairResult, find_support
 from .sources import Candidate
 from .support import SUPPORTED, SupportResult, judge_support
+from .textutil import parse_reference
 
 Emit = Callable[[str, dict], None]
 
 _HEADING = re.compile(r"^\s*(references|bibliography|works cited|参考文献)\s*[:：]?\s*$", re.IGNORECASE)
+# The same heading run onto the end of the last sentence, as chat answers sometimes have it:
+# "...remains an open research challenge [5]. References"
+_TRAILING_HEADING = re.compile(r"^(.*[.!?。)\]])\s*(?:references|bibliography|works cited|参考文献)\s*[:：]?\s*$",
+                               re.IGNORECASE)
+_LIST_NUMBER = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
 
 EXTRACT_SYSTEM = """You find the citations in a passage from a manuscript.
 You are given the passage and its numbered reference list. For every place where the passage cites
@@ -52,12 +58,24 @@ class Review:
         return asdict(self)
 
 
+def _starts_a_list(line: str) -> bool:
+    """Does this line look like the first entry of a reference list?"""
+    ref = parse_reference(line)
+    return bool(_LIST_NUMBER.match(line) or (ref.first_author and ref.year))
+
+
 def split_passage(text: str) -> tuple[str, list[str]]:
-    """Split at a "References" (or "参考文献") line: body above, one reference per line below."""
+    """Split at a "References" (or "参考文献") line: body above, one reference per line below.
+    A heading at the end of the last sentence counts too, when a reference list follows it."""
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if _HEADING.match(line):
             return "\n".join(lines[:i]).strip(), [r.strip() for r in lines[i + 1:] if r.strip()]
+    for i, line in enumerate(lines):
+        trailing = _TRAILING_HEADING.match(line)
+        rest = [r.strip() for r in lines[i + 1:] if r.strip()]
+        if trailing and rest and _starts_a_list(rest[0]):
+            return "\n".join([*lines[:i], trailing.group(1)]).strip(), rest
     return text.strip(), []
 
 
