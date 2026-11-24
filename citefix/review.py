@@ -6,13 +6,14 @@ those events to the browser as they happen.
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 
 from . import llm
-from .existence import NOT_FOUND, ExistenceResult, check_reference
+from .existence import NOT_FOUND, SAME_PAPER, ExistenceResult, check_reference
 from .repair import RepairResult, find_support
 from .sources import Candidate
 from .support import SUPPORTED, SupportResult, judge_support
@@ -171,12 +172,17 @@ def _check_claim(index: int, cite: dict, number: int, ref: ExistenceResult, repa
                            f"({result.support.verdict}): {result.support.explanation}")
         if problem and repair:
             emit("agent_start", key)
-            fix = find_support(cite["claim"], ref.reference, problem, on_step=lambda step: emit(
+            # The agent may rewrite the claim to fit the cited paper, so it gets that paper when an index has it.
+            cited_paper = None
+            if ref.match and ref.match.score >= SAME_PAPER:
+                cited_paper = dataclasses.replace(ref.match.cand, abstract=ref.abstract)
+            fix = find_support(cite["claim"], ref.reference, problem, cited_paper=cited_paper, on_step=lambda step: emit(
                 "agent_step", {**key, "action": step.action, "detail": step.detail, "results": step.results,
                                "errors": step.errors}))
             result.repair = fix
             emit("repair", {**key, "decision": fix.decision, "paper": paper_info(fix.paper), "quote": fix.quote,
-                            "explanation": fix.explanation, "revised_claim": fix.revised_claim, "check": fix.check})
+                            "explanation": fix.explanation, "revised_claim": fix.revised_claim, "check": fix.check,
+                            "keeps_citation": fix.keeps_citation})
     except llm.LLMError as err:
         emit("claim_error", {**key, "message": str(err)})
     return result

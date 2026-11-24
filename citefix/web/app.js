@@ -414,16 +414,19 @@ function secondCheck(pair, e) {
   return lines.join(' ');
 }
 
+/* Puts a citation in before the sentence's last stop. */
+function withCite(text, cite) {
+  const stop = text.search(/[.!?]["”’]*\s*$/);
+  return stop === -1 ? `${text} ${cite}` : `${text.slice(0, stop)} ${cite}${text.slice(stop)}`;
+}
+
 /* The agent rewrites the claim, which carries no citation numbers; the sentence's own numbers go back in before its last stop. */
 function withMarkers(text, pair) {
   const markers = [...pair.sentence.matchAll(MARKER)]
     .filter((m) => expandRefs(m[1]).some((ref) => pair.refs.includes(ref)))
     .map((m) => m[0]);
   const missing = [...new Set(markers)].filter((m) => !text.includes(m));
-  if (!missing.length) return text;
-  const stop = text.search(/[.!?]["”’]*\s*$/);
-  const cite = missing.join(', ');
-  return stop === -1 ? `${text} ${cite}` : `${text.slice(0, stop)} ${cite}${text.slice(stop)}`;
+  return missing.length ? withCite(text, missing.join(', ')) : text;
 }
 
 /* Called once a note has its final content: it then gets the tester's "Is this right?" row. */
@@ -616,16 +619,26 @@ const handlers = {
       pair.suggested = e.paper.apa;
       if (replace) markInsertion(pair, e.paper.short);
     } else if (e.decision === 'revise_claim' && e.revised_claim) {
-      const rewritten = withMarkers(e.revised_claim, pair);
+      // A rewrite keeps the sentence's number only when the cited paper supports it; otherwise it cites the
+      // paper that does. Recordings made before keeps_citation existed always kept the number.
+      const keeps = e.keeps_citation !== false || !e.paper;
+      const rewritten = keeps ? withMarkers(e.revised_claim, pair) : withCite(e.revised_claim, e.paper.short);
       const label = el('p', 'fix-label');
-      label.append(icon('caret'), 'Rewrite the sentence');
+      label.append(icon('caret'), keeps ? 'Rewrite the sentence' : `Rewrite the sentence and cite this paper instead of [${pair.ref}]`);
       block.append(label, el('p', 'fix-text', rewritten));
+      if (!keeps) block.append(clamp(el('p', 'fix-ref', e.paper.apa), 3));
+      if (e.quote) block.append(clamp(el('blockquote', 'evidence is-fix', `“${e.quote}”`), 3));
+      if (e.check) {
+        const whose = keeps ? `the abstract of [${pair.ref}]` : 'this abstract';
+        block.append(el('p', 'fix-check', `A separate check agrees ${whose} supports the rewritten sentence.`));
+      }
       if (e.explanation) block.append(clamp(el('p', 'why', e.explanation), 2));
       const actions = el('div', 'fix-actions');
       actions.append(copyButton('Copy sentence', rewritten));
+      if (!keeps) actions.append(copyButton('Copy reference', e.paper.apa), linkButton('Open paper', e.paper.url));
       block.append(actions);
       pair.fix = 'rewrite';
-      pair.suggested = rewritten;
+      pair.suggested = keeps ? rewritten : `${rewritten} ${e.paper.apa}`;
     } else {
       block.append(el('p', 'fix-none', 'No supporting paper found.'));
       if (e.explanation) block.append(clamp(el('p', 'why', e.explanation), 2));

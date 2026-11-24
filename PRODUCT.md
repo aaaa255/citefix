@@ -38,6 +38,7 @@ Used on a laptop while revising a manuscript. Input is pasted text: the body, a 
 ## Evidence on Hand
 
 - Evaluation results in `eval/results/` and `README.md`: step 1 on 28 references, step 2 on 14 claim/reference pairs, step 3 on 7 claims. These are small hand-written sets built on well-known papers and must be described that way.
+- Six literature-review paragraphs written by DeepSeek, whose 30 references and 30 citations Claude (an AI) labelled against the indexes and abstracts (`eval/data/llm_passages.json`). No person has reviewed the labels yet, and they must be described that way.
 - Example passage: `examples/passage.txt`.
 - There are no user testimonials or usage numbers yet; none may be invented.
 
