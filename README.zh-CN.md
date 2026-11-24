@@ -62,7 +62,7 @@ cd frontend; npm install; npm run build
 
 没有构建结果时，服务器会退回 `citefix/web/` 里原来的纯 HTML 页面。Render 部署时 Dockerfile 会自己构建，不用额外操作。改网页时在 `frontend/` 里运行 `npm run dev`，页面在 http://localhost:5173 ，`/api` 会转发给 8765 端口的 Python 服务器（详见 [frontend/README.md](frontend/README.md)）。
 
-然后打开 http://localhost:8765 ，点 **Load example**，再点 **Check citations**。正文会像论文校样一样被标注：绿色直线表示支持，琥珀色点线表示部分支持或无法判断，红色波浪线表示不支持或查无此文，蓝色插入符后面是 agent 找到的新文献。插入符只在原引文查无此文或不支持、且新文献被核对为完全支持时出现；agent 找到的其他文献在页边写成 "Possible source"，要自己核对。一句话里有几处引用时，每个编号按自己的结论着色。每条引用的结论写在右边页边，和它所在的句子对齐。
+然后打开 http://localhost:8765 ，点 **Load example**，再点 **Check citations**。正文会像论文校样一样被标注：绿色直线表示支持，橙色点线表示部分支持或无法判断，红色波浪线表示不支持或查无此文，荧光黄高亮的插入符后面是 agent 找到的新文献。插入符只在原引文查无此文或不支持、且新文献被核对为完全支持时出现；agent 找到的其他文献在页边写成 "Possible source"，要自己核对。一句话里有几处引用时，每个编号按自己的结论着色。每条引用的结论写在右边页边，和它所在的句子对齐。
 
 两个开发用选项：
 

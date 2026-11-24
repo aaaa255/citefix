@@ -1,13 +1,14 @@
 import { useContext, useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Check, ChevronRight, Search, TriangleAlert, X } from 'lucide-react';
-import { plural } from '../../lib/check.js';
+import { useI18n } from '../../lib/i18n.jsx';
 import { CaretMark, Clamp, CopyButton, Icon, LayoutContext, LinkButton, Pulse, VerdictIcon } from '../ui.jsx';
 
 /* One margin note: the verdict, the cited paper, the evidence, the agent's search and its fix.
-   demo: the read-only version shown on the landing page (no buttons, no "Is this right?", the agent's trail left open);
+   demo: the read-only version shown on the cover (no buttons, no "Is this right?", the agent's trail left open);
    reasons={false} also leaves out the written reasons, for the smallest version. */
 export default function Note({ pair, refEvent, hot = false, flash = false, onHot, onVote, onWhy, demo = false, reasons = true }) {
+  const { t } = useI18n();
   const reduce = useReducedMotion();
   const classes = ['note', `is-${pair.tone}`, pair.repeat && 'is-repeat', hot && 'is-hot', flash && 'is-flash'].filter(Boolean).join(' ');
   const parts = reasons ? pair.parts : pair.parts.filter((part) => part.kind !== 'why');
@@ -24,7 +25,7 @@ export default function Note({ pair, refEvent, hot = false, flash = false, onHot
         <span className="note-ref">[{pair.ref}]</span>
         <span className="note-verdict">
           {pair.icon ? <VerdictIcon name={pair.icon} /> : <Pulse />}
-          {pair.label}
+          {t(pair.label)}
         </span>
       </header>
       {/* The start of the checked sentence, shown where the number alone cannot tell notes apart: on narrow screens,
@@ -32,8 +33,8 @@ export default function Note({ pair, refEvent, hot = false, flash = false, onHot
       <p className="note-sentence" title={pair.sentence}>{pair.sentence}</p>
       <SourceLine event={refEvent} />
       <div className="note-body">
-        {parts.map((part, i) => <Part key={i} part={part} pair={pair} demo={demo} />)}
-        {pair.votable && !demo && <Vote pair={pair} onVote={onVote} onWhy={onWhy} />}
+        {parts.map((part, i) => <Part key={i} part={part} pair={pair} demo={demo} t={t} />)}
+        {pair.votable && !demo && <Vote pair={pair} onVote={onVote} onWhy={onWhy} t={t} />}
       </div>
     </motion.article>
   );
@@ -49,37 +50,38 @@ function SourceLine({ event: e }) {
   );
 }
 
-function Part({ part, pair, demo }) {
+function Part({ part, pair, demo, t }) {
   switch (part.kind) {
     case 'why':
-      return <Clamp className="why" lines={part.lines}>{part.text}</Clamp>;
+      return <Clamp className="why" lines={part.lines}>{part.key ? t(part.key) : part.text}</Clamp>;
     case 'evidence':
       return <Clamp as="blockquote" className={`evidence is-${part.tone}`} lines={part.lines}>“{part.text}”</Clamp>;
     case 'more':
-      return <More part={part} />;
+      return <More part={part} t={t} />;
     case 'from':
-      return <p className="from">{part.text}</p>;
+      return <p className="from">{t(part.key)}</p>;
     case 'agent':
-      return pair.agent ? <AgentTrail agent={pair.agent} keepOpen={demo} /> : null;
+      return pair.agent ? <AgentTrail agent={pair.agent} keepOpen={demo} t={t} /> : null;
     case 'fix':
-      return pair.fixData ? <Fix pair={pair} demo={demo} /> : null;
+      return pair.fixData ? <Fix pair={pair} demo={demo} t={t} /> : null;
     default:
       return null;
   }
 }
 
-function More({ part }) {
+function More({ part, t }) {
   const layoutSoon = useContext(LayoutContext);
   return (
     <details className="more" onToggle={layoutSoon}>
-      <summary>What the abstract says</summary>
+      <summary>{t('note.abstractSays')}</summary>
       <blockquote className={`evidence is-${part.tone}`}>“{part.text}”</blockquote>
     </details>
   );
 }
 
 /* Open while the agent works; collapses to "Agent searched N times" when it finishes. */
-function AgentTrail({ agent, keepOpen }) {
+function AgentTrail({ agent, keepOpen, t }) {
+  const { list } = useI18n();
   const [open, setOpen] = useState(true);
   const layoutSoon = useContext(LayoutContext);
   useEffect(() => {
@@ -89,64 +91,66 @@ function AgentTrail({ agent, keepOpen }) {
     <details className="agent" open={open} onToggle={(e) => { setOpen(e.currentTarget.open); layoutSoon(); }}>
       <summary className="agent-head">
         {agent.finished
-          ? <><Icon as={ChevronRight} />Agent searched {plural(agent.searches, 'time')}</>
-          : <><Pulse />Agent is looking for a paper that supports this</>}
+          ? <><Icon as={ChevronRight} />{t('agent.searched', { n: agent.searches })}</>
+          : <><Pulse />{t('agent.looking')}</>}
       </summary>
       <ol className="trail">
         {agent.trail.map((step, i) => {
           if (step.kind === 'search') {
             return (
               <li key={i} className="is-search">
-                <Icon as={Search} /><span>“{step.detail}”</span><span className="count">{plural(step.results, 'result')}</span>
+                <Icon as={Search} /><span>“{step.detail}”</span><span className="count">{t('agent.results', { n: step.results })}</span>
               </li>
             );
           }
           if (step.kind === 'failed') {
-            return <li key={i} className="is-failed" title={step.title}><span /><span>{step.text}</span><span /></li>;
+            return <li key={i} className="is-failed" title={step.title}><span /><span>{t('agent.noAnswer', { sources: list(step.sources) })}</span><span /></li>;
           }
-          return <li key={i} className="is-rejected"><Icon as={X} /><span>Suggestion sent back: {step.detail}</span><span /></li>;
+          return <li key={i} className="is-rejected"><Icon as={X} /><span>{t('agent.rejected', { detail: step.detail })}</span><span /></li>;
         })}
       </ol>
     </details>
   );
 }
 
-function Fix({ pair, demo }) {
+function Fix({ pair, demo, t }) {
   const f = pair.fixData;
   if (f.type === 'replace' || f.type === 'candidate') {
     const replace = f.type === 'replace';
     return (
       <div className="fix">
-        <p className="fix-label">{replace ? <CaretMark /> : <Icon as={TriangleAlert} />}{replace ? 'Cite instead' : 'Possible source'}</p>
+        <p className="fix-label">
+          {replace ? <CaretMark /> : <Icon as={TriangleAlert} />}
+          {replace ? <span className="marker-stroke">{t('fix.citeInstead')}</span> : t('fix.possible')}
+        </p>
         <Clamp className="fix-ref" lines={3}>{f.paper.apa}</Clamp>
         {f.quote && <Clamp as="blockquote" className="evidence is-fix" lines={3}>“{f.quote}”</Clamp>}
-        <p className="fix-check">{f.checkLine}</p>
+        <p className="fix-check">{f.checkLines.map((line) => t(line.key, line.params)).join(' ')}</p>
         {!demo && (
           <div className="fix-actions">
-            <CopyButton label="Copy reference" text={f.paper.apa} />
-            <LinkButton label="Open paper" url={f.paper.url} />
+            <CopyButton label={t('copy.reference')} text={f.paper.apa} />
+            <LinkButton label={t('open.paper')} url={f.paper.url} />
           </div>
         )}
       </div>
     );
   }
   if (f.type === 'rewrite') {
-    const whose = f.keeps ? `the abstract of [${pair.ref}]` : 'this abstract';
     return (
       <div className="fix">
         <p className="fix-label">
           <CaretMark />
-          {f.keeps ? 'Rewrite the sentence' : `Rewrite the sentence and cite this paper instead of [${pair.ref}]`}
+          <span className="marker-stroke">{f.keeps ? t('fix.rewrite') : t('fix.rewriteCite', { ref: pair.ref })}</span>
         </p>
         <p className="fix-text">{f.rewritten}</p>
         {!f.keeps && <Clamp className="fix-ref" lines={3}>{f.paper.apa}</Clamp>}
         {f.quote && <Clamp as="blockquote" className="evidence is-fix" lines={3}>“{f.quote}”</Clamp>}
-        {f.check && <p className="fix-check">A separate check agrees {whose} supports the rewritten sentence.</p>}
+        {f.check && <p className="fix-check">{f.keeps ? t('fix.rewriteCheckOwn', { ref: pair.ref }) : t('fix.rewriteCheckNew')}</p>}
         {f.explanation && !demo && <Clamp className="why" lines={2}>{f.explanation}</Clamp>}
         {!demo && (
           <div className="fix-actions">
-            <CopyButton label="Copy sentence" text={f.rewritten} />
-            {!f.keeps && <><CopyButton label="Copy reference" text={f.paper.apa} /><LinkButton label="Open paper" url={f.paper.url} /></>}
+            <CopyButton label={t('copy.sentence')} text={f.rewritten} />
+            {!f.keeps && <><CopyButton label={t('copy.reference')} text={f.paper.apa} /><LinkButton label={t('open.paper')} url={f.paper.url} /></>}
           </div>
         )}
       </div>
@@ -154,22 +158,22 @@ function Fix({ pair, demo }) {
   }
   return (
     <div className="fix">
-      <p className="fix-none">No supporting paper found.</p>
+      <p className="fix-none">{t('fix.none')}</p>
       {f.explanation && !demo && <Clamp className="why" lines={2}>{f.explanation}</Clamp>}
     </div>
   );
 }
 
 /* The tester's mark on a finished note. */
-function Vote({ pair, onVote, onWhy }) {
-  const options = [['right', Check, 'Yes'], ['wrong', X, 'No']];
+function Vote({ pair, onVote, onWhy, t }) {
+  const options = [['right', Check, 'vote.yes'], ['wrong', X, 'vote.no']];
   return (
     <>
-      <div className="vote" role="group" aria-label={`Is the check of [${pair.ref}] right?`}>
-        <span className="vote-q">Is this right?</span>
+      <div className="vote" role="group" aria-label={t('vote.groupLabel', { ref: pair.ref })}>
+        <span className="vote-q">{t('vote.question')}</span>
         {options.map(([value, glyph, label]) => (
           <button key={value} type="button" className="vote-btn" aria-pressed={pair.vote === value} onClick={() => onVote(pair.key, value)}>
-            <Icon as={glyph} />{label}
+            <Icon as={glyph} />{t(label)}
           </button>
         ))}
       </div>
@@ -178,8 +182,8 @@ function Vote({ pair, onVote, onWhy }) {
           className="field vote-why"
           rows={2}
           maxLength={1000}
-          placeholder="What’s wrong? (optional)"
-          aria-label={`What is wrong with the check of [${pair.ref}]`}
+          placeholder={t('vote.why')}
+          aria-label={t('vote.whyLabel', { ref: pair.ref })}
           value={pair.why}
           onChange={(e) => onWhy(pair.key, e.target.value)}
         />

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useReducedMotion } from 'motion/react';
 
-/* The hero's backdrop, in four layers: a slow fluid gradient (WebGL) that bends around the pointer, a Gaussian-blur
-   veil that keeps the headline side calm, a few motes of dust that drift up and link near the pointer like citations,
-   and a fade into the page. Everything runs outside React; it pauses off screen, in hidden tabs and for reduced motion. */
+/* The hero's backdrop, in three layers: a soft flow of ice white and silver (WebGL) with a satin sheen; a
+   Gaussian-blur veil behind the headline only; and a field of graphite dots that a slow wave sweeps across, that
+   bulge away from the pointer, and that ripple out from a click. Everything runs outside React, and it pauses off
+   screen, in hidden tabs and for reduced motion. */
 
 const VERT = 'attribute vec2 a; void main() { gl_Position = vec4(a, 0.0, 1.0); }';
 
@@ -40,46 +41,51 @@ float snoise(vec2 v) {
 }
 float fbm(vec2 p) {
   float s = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 4; i++) { s += a * snoise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; }
+  float a = 0.55;
+  for (int i = 0; i < 3; i++) { s += a * snoise(p); p = p * 1.9 + vec2(1.7, 9.2); a *= 0.45; }
   return s;
 }
 
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   float aspect = uRes.x / uRes.y;
-  vec2 p = vec2(uv.x * aspect, uv.y) * 1.25;
-  float t = uTime * 0.05;
+  vec2 p = vec2(uv.x * aspect, uv.y) * 1.1;
+  float t = uTime * 0.075;
 
   // the pointer: a soft lens that pushes the flow aside and twists it a little
-  vec2 m = vec2(uMouse.x * aspect, uMouse.y) * 1.25;
+  vec2 m = vec2(uMouse.x * aspect, uMouse.y) * 1.1;
   vec2 d = p - m;
   float lens = exp(-dot(d, d) * 3.0) * uPointer;
-  float turn = lens * 1.4;
+  float turn = lens * 1.6;
   d = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * d;
-  p = m + d * (1.0 + lens * 0.35);
+  p = m + d * (1.0 + lens * 0.3);
 
   vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 2.1 * q + vec2(1.7, 9.2) + 0.7 * t), fbm(p + 2.1 * q + vec2(8.3, 2.8) - 0.5 * t));
-  float f = fbm(p + 2.3 * r);
-  float v = clamp(0.52 + 0.8 * f, 0.0, 1.0);
+  vec2 r = vec2(fbm(p + 2.0 * q + vec2(1.7, 9.2) + 0.7 * t), fbm(p + 2.0 * q + vec2(8.3, 2.8) - 0.5 * t));
+  float f = fbm(p + 2.2 * r);
+  float v = clamp(0.5 + 0.8 * f, 0.0, 1.0);
 
-  vec3 base   = mix(vec3(0.957, 0.969, 0.984), vec3(0.024, 0.043, 0.082), uDark);
-  vec3 ice    = mix(vec3(0.808, 0.878, 0.996), vec3(0.047, 0.106, 0.239), uDark);
-  vec3 azure  = mix(vec3(0.459, 0.627, 0.992), vec3(0.090, 0.231, 0.565), uDark);
-  vec3 cobalt = mix(vec3(0.122, 0.310, 0.847), vec3(0.247, 0.435, 0.957), uDark);
-  vec3 cyan   = mix(vec3(0.529, 0.839, 0.949), vec3(0.059, 0.341, 0.451), uDark);
+  // ice white, mist, silver and a deeper silver; in the dark, graphite lit in silver
+  vec3 ice    = mix(vec3(0.965, 0.973, 0.980), vec3(0.043, 0.051, 0.063), uDark);
+  vec3 mist   = mix(vec3(0.906, 0.918, 0.937), vec3(0.090, 0.102, 0.122), uDark);
+  vec3 silver = mix(vec3(0.780, 0.800, 0.830), vec3(0.231, 0.255, 0.290), uDark);
+  vec3 deep   = mix(vec3(0.620, 0.650, 0.695), vec3(0.420, 0.455, 0.502), uDark);
 
-  vec3 col = base;
-  col = mix(col, ice, smoothstep(0.2, 0.52, v));
-  col = mix(col, azure, smoothstep(0.48, 0.76, v) * 0.9);
-  col = mix(col, cobalt, smoothstep(0.72, 0.95, v) * 0.85);
-  col = mix(col, cyan, smoothstep(0.4, 1.0, length(r)) * 0.3);
-  col = mix(col, mix(vec3(1.0), azure * 1.25, uDark), lens * 0.25);
+  vec3 col = ice;
+  col = mix(col, mist, smoothstep(0.2, 0.48, v));
+  col = mix(col, silver, smoothstep(0.46, 0.76, v) * 0.9);
+  col = mix(col, deep, smoothstep(0.78, 0.98, v) * 0.55);
 
-  // calmer toward the headline (left) and the bottom edge
-  float calm = smoothstep(0.55, 0.0, uv.x) * 0.42 + smoothstep(0.3, 0.0, uv.y) * 0.3;
-  col = mix(col, base, clamp(calm, 0.0, 0.7));
+  // a soft sheen riding along the crests of the flow, like light on satin
+  float sheen = smoothstep(0.25, 0.9, r.x * 0.5 + 0.5) * smoothstep(0.35, 0.75, v);
+  col = mix(col, mix(vec3(1.0), vec3(0.62, 0.66, 0.71), uDark), sheen * 0.4);
+
+  // the pointer brings a soft light with it
+  col = mix(col, mix(vec3(1.0), vec3(0.75, 0.79, 0.84), uDark), lens * 0.35);
+
+  // calmer behind the headline (left) and toward the bottom edge
+  float calm = smoothstep(0.5, 0.0, uv.x) * 0.4 + smoothstep(0.25, 0.0, uv.y) * 0.3;
+  col = mix(col, ice, clamp(calm, 0.0, 0.6));
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -108,7 +114,7 @@ function startFluid(canvas, pointer) {
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const u = (name) => gl.getUniformLocation(program, name);
   const uRes = u('uRes'); const uTime = u('uTime'); const uMouse = u('uMouse'); const uPointer = u('uPointer'); const uDark = u('uDark');
-  const SCALE = 0.45; // the veil blurs it anyway, so it renders at under half size
+  const SCALE = 0.5;
   const lens = { x: 0.74, y: 0.45, s: 0 };
   let dark = 0;
   return {
@@ -124,10 +130,10 @@ function startFluid(canvas, pointer) {
     },
     frame(t, ease = 1) {
       const p = pointer.current;
-      const k = Math.min(1, 0.05 * ease); // ease > 1 settles the lens at once, for a single still frame
+      const k = Math.min(1, 0.06 * ease); // ease > 1 settles the lens at once, for a single still frame
       lens.x += ((p.active ? p.x : 0.74) - lens.x) * k;
       lens.y += ((p.active ? 1 - p.y : 0.45) - lens.y) * k;
-      lens.s += ((p.active ? 1 : 0) - lens.s) * Math.min(1, 0.035 * ease);
+      lens.s += ((p.active ? 1 : 0) - lens.s) * Math.min(1, 0.04 * ease);
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, t);
       gl.uniform2f(uMouse, lens.x, lens.y);
@@ -138,20 +144,24 @@ function startFluid(canvas, pointer) {
   };
 }
 
-function startDust(canvas, pointer) {
+const smooth = (a, b, x) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
+
+/* A grid of dots drawn in a few batches by opacity, so even two thousand of them cost little per frame. */
+function startDots(canvas, pointer, ripples) {
   const ctx = canvas.getContext('2d');
-  const motes = [];
+  const GAP = 24;
+  const LEVELS = 12;
+  const buckets = Array.from({ length: LEVELS }, () => []);
+  let dots = [];
   let w = 0; let h = 0; let dpr = 1; let dark = false;
-  const seed = () => {
-    motes.length = 0;
-    const count = Math.round(Math.min(70, Math.max(28, (w * h) / 17000)));
-    for (let i = 0; i < count; i += 1) {
-      motes.push({
-        x: Math.random() * w, y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.1, vy: -0.04 - Math.random() * 0.1,
-        r: 0.7 + Math.random() * 1.4, a: 0.3 + Math.random() * 0.45, ph: Math.random() * 6.28, ox: 0, oy: 0,
-      });
-    }
+  const lay = () => {
+    dots = [];
+    const cols = Math.ceil(w / GAP) + 1; const rows = Math.ceil(h / GAP) + 1;
+    const ox = (w - (cols - 1) * GAP) / 2; const oy = (h - (rows - 1) * GAP) / 2;
+    for (let j = 0; j < rows; j += 1) for (let i = 0; i < cols; i += 1) dots.push(ox + i * GAP, oy + j * GAP);
   };
   return {
     setDark(on) { dark = on; },
@@ -159,81 +169,88 @@ function startDust(canvas, pointer) {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       const nw = canvas.clientWidth; const nh = canvas.clientHeight;
       if (nw === w && nh === h) return;
-      const first = !w;
       w = nw; h = nh;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      if (first) seed();
+      lay();
     },
     frame(t, moving = true) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
+      for (const bucket of buckets) bucket.length = 0;
       const p = pointer.current;
       const px = p.x * w; const py = p.y * h;
-      const rgb = dark ? '157, 184, 255' : '31, 79, 216';
-      for (const m of motes) {
-        if (moving) {
-          m.x += m.vx; m.y += m.vy;
-          if (m.y < -12) { m.y = h + 12; m.x = Math.random() * w; }
-          if (m.x < -12) m.x = w + 12;
-          if (m.x > w + 12) m.x = -12;
-        }
-        let tx = 0; let ty = 0;
-        if (p.active) {
-          const dx = m.x - px; const dy = m.y - py; const dist = Math.hypot(dx, dy);
-          if (dist < 160 && dist > 0.5) { const push = (1 - dist / 160) ** 2 * 28; tx = (dx / dist) * push; ty = (dy / dist) * push; }
-        }
-        m.ox += (tx - m.ox) * 0.08; m.oy += (ty - m.oy) * 0.08;
-      }
-      const shown = (m) => Math.min(1, Math.max(0, (m.x / w - 0.18) / 0.4)); // the headline side stays clear
-      if (p.active) {
-        ctx.lineWidth = 0.7;
-        for (let i = 0; i < motes.length; i += 1) {
-          const a = motes[i]; const ax = a.x + a.ox; const ay = a.y + a.oy;
-          if (Math.hypot(ax - px, ay - py) > 230) continue;
-          for (let j = i + 1; j < motes.length; j += 1) {
-            const b = motes[j]; const bx = b.x + b.ox; const by = b.y + b.oy;
-            const dist = Math.hypot(ax - bx, ay - by);
-            if (dist > 120 || Math.hypot(bx - px, by - py) > 230) continue;
-            ctx.strokeStyle = `rgba(${rgb}, ${(1 - dist / 120) * 0.28 * Math.min(shown(a), shown(b))})`;
-            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      const now = performance.now();
+      while (ripples.length && now - ripples[0].start > 1700) ripples.shift();
+      const rings = ripples.map((r) => ({ x: r.x * w, y: r.y * h, age: (now - r.start) / 1000 }));
+      for (let i = 0; i < dots.length; i += 2) {
+        let x = dots[i]; let y = dots[i + 1];
+        const side = 0.28 + 0.72 * smooth(0.1, 0.55, x / w); // quieter behind the headline
+        // a slow diagonal swell travelling across the field
+        const swell = moving ? (0.5 + 0.5 * Math.sin((x * 0.8 + y * 0.45) / 150 - t * 1.4)) ** 7 : 0;
+        let r = 0.9 + 1.1 * swell;
+        let a = 0.14 + 0.24 * swell;
+        if (p.active && moving) {
+          const dx = x - px; const dy = y - py; const d2 = dx * dx + dy * dy;
+          const k = Math.exp(-d2 / 18000);
+          if (k > 0.01) {
+            const dist = Math.sqrt(d2) || 1;
+            x += (dx / dist) * 18 * k; y += (dy / dist) * 18 * k;
+            r += 2.1 * k; a += 0.5 * k;
           }
         }
+        for (const ring of rings) {
+          const dx = dots[i] - ring.x; const dy = dots[i + 1] - ring.y; const dist = Math.hypot(dx, dy) || 1;
+          const band = Math.exp(-(((dist - ring.age * 560) / 26) ** 2)) * Math.max(0, 1 - ring.age / 1.7);
+          if (band > 0.01) {
+            x += (dx / dist) * 8 * band; y += (dy / dist) * 8 * band;
+            r += 2.2 * band; a += 0.55 * band;
+          }
+        }
+        a = Math.min(0.92, a) * side;
+        buckets[Math.min(LEVELS - 1, Math.floor((a / 0.92) * LEVELS))].push(x, y, r);
       }
-      for (const m of motes) {
-        const twinkle = 0.65 + 0.35 * Math.sin(t * 1.2 + m.ph);
-        ctx.fillStyle = `rgba(${rgb}, ${m.a * twinkle * shown(m)})`;
-        ctx.beginPath(); ctx.arc(m.x + m.ox, m.y + m.oy, m.r, 0, 6.2832); ctx.fill();
+      const rgb = dark ? '226, 231, 237' : '17, 19, 23';
+      for (let level = 0; level < LEVELS; level += 1) {
+        const list = buckets[level];
+        if (!list.length) continue;
+        ctx.fillStyle = `rgba(${rgb}, ${((level + 0.5) / LEVELS) * 0.92})`;
+        ctx.beginPath();
+        for (let i = 0; i < list.length; i += 3) {
+          ctx.moveTo(list[i] + list[i + 2], list[i + 1]);
+          ctx.arc(list[i], list[i + 1], list[i + 2], 0, 6.2832);
+        }
+        ctx.fill();
       }
     },
   };
 }
 
-export default function HeroBackdrop({ pointer, calm = false }) {
+export default function HeroBackdrop({ pointer, ripples }) {
   const wrapRef = useRef(null);
   const fluidRef = useRef(null);
-  const dustRef = useRef(null);
+  const dotsRef = useRef(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
     const wrap = wrapRef.current;
     const fluid = startFluid(fluidRef.current, pointer);
-    const dust = calm ? null : startDust(dustRef.current, pointer);
+    const dots = startDots(dotsRef.current, pointer, ripples.current);
     wrap.classList.toggle('fluid-fallback', !fluid);
     const t0 = performance.now();
     let raf = 0; let running = false; let onScreen = true;
     const draw = (moving) => {
       const t = (performance.now() - t0) / 1000;
       fluid?.frame(reduce ? 0 : t, moving ? 1 : 40);
-      dust?.frame(t, moving);
+      dots.frame(t, moving);
     };
     const tick = () => { draw(true); if (running) raf = requestAnimationFrame(tick); };
     const play = () => { if (running || reduce) return; running = true; raf = requestAnimationFrame(tick); };
     const pause = () => { running = false; cancelAnimationFrame(raf); };
     const sync = () => (onScreen && !document.hidden ? play() : pause());
-    const resize = () => { fluid?.resize(); dust?.resize(); if (!running) draw(false); };
+    const resize = () => { fluid?.resize(); dots.resize(); if (!running) draw(false); };
     const scheme = window.matchMedia('(prefers-color-scheme: dark)');
-    const onScheme = () => { fluid?.setDark(scheme.matches); dust?.setDark(scheme.matches); if (!running) draw(false); };
+    const onScheme = () => { fluid?.setDark(scheme.matches); dots.setDark(scheme.matches); if (!running) draw(false); };
     onScheme();
     resize();
     const sizes = new ResizeObserver(resize);
@@ -249,17 +266,14 @@ export default function HeroBackdrop({ pointer, calm = false }) {
       document.removeEventListener('visibilitychange', sync);
       scheme.removeEventListener('change', onScheme);
     };
-  }, [pointer, reduce, calm]);
+  }, [pointer, ripples, reduce]);
 
   return (
-    <div
-      ref={wrapRef}
-      className={`pointer-events-none absolute inset-0 -z-10 overflow-hidden ${calm ? 'melt-edges' : 'melt-bottom'}`}
-      aria-hidden="true"
-    >
-      <canvas ref={fluidRef} className="absolute inset-0 h-full w-full" />
+    <div ref={wrapRef} className="melt-bottom pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+      {/* blurred as a whole, so the flow reads as soft silver mist; scaled up so the blurred edges stay off screen */}
+      <canvas ref={fluidRef} className="absolute inset-0 h-full w-full scale-110 blur-[16px]" />
       <div className="veil absolute inset-0" />
-      {!calm && <canvas ref={dustRef} className="absolute inset-0 h-full w-full" />}
+      <canvas ref={dotsRef} className="absolute inset-0 h-full w-full" />
     </div>
   );
 }

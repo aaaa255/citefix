@@ -89,6 +89,13 @@ class PageServingTest(unittest.TestCase):
         self.assertEqual(self.get("/", method="HEAD")[0], 200)
         self.assertEqual(self.get("/missing.js", method="HEAD")[0], 404)
 
+    def test_the_checker_page_has_its_own_address(self):
+        self.assertEqual(self.get("/check")[2], (web.WEB_DIR / "index.html").read_bytes())  # classic page
+        self.build_page()
+        status, _, body = self.get("/check")
+        self.assertEqual((status, body), (200, b"<!doctype html><title>react build</title>"))
+        self.assertEqual(self.get("/check/../secret.txt")[0], 404)
+
     def test_the_api_still_answers(self):
         self.build_page()
         status, headers, _ = self.get("/api/example")

@@ -1,17 +1,18 @@
 /* One check, rebuilt from the server's events. POST /api/review streams one JSON object per line; each event goes
    through reduce() below, which mirrors the handlers of the original front end (citefix/web/app.js). Everything the
-   server or the passage sends is rendered by React as text, never as HTML. */
+   server or the passage sends is rendered by React as text, never as HTML. The page's own words are kept as
+   translation keys (see i18n.jsx); what the server or the model wrote is kept as it came. */
 
 export const SUPPORT = {
-  supported: { tone: 'ok', label: 'Supported', icon: 'check' },
-  partially_supported: { tone: 'warn', label: 'Partly supported', icon: 'query' },
-  not_supported: { tone: 'bad', label: 'Not supported', icon: 'cross' },
-  insufficient_evidence: { tone: 'warn', label: 'Can’t tell from the abstract', icon: 'query' },
+  supported: { tone: 'ok', label: 'verdict.supported', icon: 'check' },
+  partially_supported: { tone: 'warn', label: 'verdict.partly', icon: 'query' },
+  not_supported: { tone: 'bad', label: 'verdict.notSupported', icon: 'cross' },
+  insufficient_evidence: { tone: 'warn', label: 'verdict.cantTell', icon: 'query' },
 };
 export const REFERENCE = {
-  verified: { tone: 'ok', label: 'Found', icon: 'check' },
-  suspicious: { tone: 'warn', label: 'Details differ', icon: 'query' },
-  not_found: { tone: 'bad', label: 'Not found', icon: 'cross' },
+  verified: { tone: 'ok', label: 'refs.found', icon: 'check' },
+  suspicious: { tone: 'warn', label: 'refs.differ', icon: 'query' },
+  not_found: { tone: 'bad', label: 'refs.notFound', icon: 'cross' },
 };
 export const SOURCES = { openalex: 'OpenAlex', crossref: 'Crossref', arxiv: 'arXiv', semantic_scholar: 'Semantic Scholar' };
 export const TONE_RANK = { ok: 0, pending: 1, warn: 2, bad: 3 };
@@ -22,14 +23,6 @@ export const LIST_NUMBER = /^\s*(?:\[\d+\]|\(\d+\)|\d+[.)])\s+/;
 export const TESTER_KEY = 'citefix.tester';
 
 /* ---------- small helpers ---------- */
-
-export function plural(n, word) {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
-}
-
-export function listOf(names) {
-  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}
 
 export function safeUrl(url) {
   return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
@@ -43,7 +36,7 @@ function sourceName(error) {
 export function expandRefs(spec) {
   const out = [];
   for (const part of spec.split(',')) {
-    const [a, b] = part.split(/[–-]/).map((s) => parseInt(s, 10));
+    const [a, b] = part.split(/[–-]/).map((n) => parseInt(n, 10));
     if (Number.isFinite(a) && Number.isFinite(b) && b >= a && b - a < 60) {
       for (let n = a; n <= b; n += 1) out.push(n);
     } else if (Number.isFinite(a)) {
@@ -126,7 +119,7 @@ export function proofLayout(body, citations) {
 
 /* Puts a citation in before the sentence's last stop. */
 export function withCite(text, cite) {
-  const stop = text.search(/[.!?]["”’]*\s*$/);
+  const stop = text.search(/[.!?。！？]["”’]*\s*$/);
   return stop === -1 ? `${text} ${cite}` : `${text.slice(0, stop)} ${cite}${text.slice(stop)}`;
 }
 
@@ -139,18 +132,13 @@ function withMarkers(text, pair) {
   return missing.length ? withCite(text, missing.join(', ')) : text;
 }
 
-/* The line under a suggested paper: what the second check found and, for a possible source, why it is only that. */
+/* The lines under a suggested paper: what the second check found and, for a possible source, why it is only that. */
 function secondCheck(pair, e) {
   const lines = [];
-  if (pair.verdictKey === 'insufficient_evidence') {
-    lines.push(`[${pair.ref}] may still be right: its abstract does not settle this, so check its full text first.`);
-  } else if (pair.verdictKey === 'partially_supported') {
-    lines.push(`[${pair.ref}] partly supports this sentence, so this paper may belong beside it rather than in its place.`);
-  }
-  lines.push(e.check === 'partially_supported'
-    ? 'A separate check finds this abstract only partly supports your sentence.'
-    : 'A separate check agrees this abstract supports your sentence.');
-  return lines.join(' ');
+  if (pair.verdictKey === 'insufficient_evidence') lines.push({ key: 'fix.mayStillBeRight', params: { ref: pair.ref } });
+  else if (pair.verdictKey === 'partially_supported') lines.push({ key: 'fix.besideIt', params: { ref: pair.ref } });
+  lines.push({ key: e.check === 'partially_supported' ? 'fix.checkPartial' : 'fix.checkAgrees' });
+  return lines;
 }
 
 /* ---------- state ---------- */
@@ -158,11 +146,12 @@ function secondCheck(pair, e) {
 export const initialState = {
   mode: 'edit', // 'edit': the editor; 'proof': the passage with its marks
   check: null, // the check in progress or the last one
-  status: null, // { kind: 'text' | 'error' | 'summary', ... }
+  status: null, // { kind: 'text', key, params, tone } | { kind: 'raw', text } | { kind: 'error', key | text } | summary
   notices: [],
   progress: 'hidden', // 'hidden', null (still working, no fraction yet) or a fraction from 0 to 1
-  feedbackOpen: false,
 };
+
+const say = (key, params, tone) => ({ kind: 'text', key, params, tone });
 
 function freshCheck(id) {
   return {
@@ -175,7 +164,7 @@ function newPair(item, ref) {
   const sentence = item.sentence || item.claim || '';
   return {
     key: `${item.index}-${ref}`, index: item.index, ref, refs: item.refs || [], sentence, claim: item.claim || item.sentence,
-    tone: 'pending', label: 'Checking…', icon: null, repeat: false,
+    tone: 'pending', label: 'note.checking', icon: null, repeat: false,
     parts: [], agent: null, fix: null, fixData: null,
     done: false, failed: false, votable: false, vote: null, why: '',
     verdictKey: '', quote: '', suggested: '', // for feedback
@@ -185,10 +174,8 @@ function newPair(item, ref) {
 function searchingStatus(c) {
   const refs = [...new Set(c.searching.map((key) => c.pairs[key]?.ref))]
     .filter((ref) => ref != null).sort((a, b) => a - b).map((ref) => `[${ref}]`);
-  if (refs.length) {
-    return { kind: 'text', text: `The agent is looking for ${refs.length === 1 ? 'a supporting paper' : 'supporting papers'} for ${listOf(refs)}…` };
-  }
-  if (c.total) return { kind: 'text', text: `Checking ${plural(c.total, 'citation')}…` };
+  if (refs.length) return say('status.agent', { refs });
+  if (c.total) return say('status.checking', { n: c.total });
   return null;
 }
 
@@ -200,11 +187,11 @@ function summary(c) {
   const rewrite = pairs.filter((p) => p.fix === 'rewrite').length;
   const open = pairs.length - supported - replaced - possible - rewrite;
   const parts = [];
-  if (supported) parts.push(['ok', `${supported} supported`]);
-  if (replaced) parts.push(['fix', `${replaced} with a better source`]);
-  if (possible) parts.push(['fix', `${possible} with a possible source to check`]);
-  if (rewrite) parts.push(['fix', `${rewrite} to rewrite`]);
-  if (open) parts.push(['bad', `${open} unresolved`]);
+  if (supported) parts.push(['ok', 'sum.supported', supported]);
+  if (replaced) parts.push(['fix', 'sum.better', replaced]);
+  if (possible) parts.push(['fix', 'sum.possible', possible]);
+  if (rewrite) parts.push(['fix', 'sum.rewrite', rewrite]);
+  if (open) parts.push(['bad', 'sum.unresolved', open]);
   return { kind: 'summary', count: pairs.length, seconds: c.seconds, recorded: c.replay, parts };
 }
 
@@ -243,7 +230,7 @@ function reduceEvent(state, e) {
       break;
 
     case 'queued':
-      s.status = { kind: 'text', text: e.text };
+      s.status = say('status.queued');
       s.progress = null;
       break;
 
@@ -251,7 +238,7 @@ function reduceEvent(state, e) {
       c.body = e.body || '';
       c.references = e.references || [];
       s.mode = 'proof';
-      s.status = { kind: 'text', text: `Looking up ${plural(c.references.length, 'reference')} and finding the citations…` };
+      s.status = say('status.lookingUp', { n: c.references.length });
       s.progress = null;
       break;
 
@@ -276,10 +263,10 @@ function reduceEvent(state, e) {
       }
       c.total = c.order.length;
       if (c.total) {
-        s.status = { kind: 'text', text: `Checking ${plural(c.total, 'citation')}…` };
+        s.status = say('status.checking', { n: c.total });
         s.progress = 0;
       } else {
-        s.status = { kind: 'text', tone: 'warn', text: 'No citations found. Cite with [1] or (Author, Year) so each one points into the reference list.' };
+        s.status = say('status.noCitations', null, 'warn');
         s.progress = 'hidden';
       }
       break;
@@ -290,9 +277,9 @@ function reduceEvent(state, e) {
       if (!pair) break;
       const missing = e.kind === 'reference_not_found';
       pair.verdictKey = e.kind;
-      if (missing) setVerdict(pair, 'bad', 'Reference not found', 'cross');
-      else setVerdict(pair, 'warn', 'No abstract to check', 'query');
-      pair.parts.push({ kind: 'why', text: e.text, lines: 2 });
+      if (missing) setVerdict(pair, 'bad', 'verdict.refNotFound', 'cross');
+      else setVerdict(pair, 'warn', 'verdict.noAbstract', 'query');
+      pair.parts.push(missing ? { kind: 'why', key: 'note.refNotFound', lines: 2 } : { kind: 'why', text: e.text, lines: 2 });
       if (!missing) finish(pair); // a missing reference goes on to the agent
       break;
     }
@@ -310,7 +297,7 @@ function reduceEvent(state, e) {
         if (e.explanation) pair.parts.push({ kind: 'why', text: e.explanation, lines: 3 });
         if (e.quote) pair.parts.push({ kind: 'more', tone: v.tone, text: e.quote });
       }
-      if (e.quote && !e.quote_found) pair.parts.push({ kind: 'from', text: 'This quote was not found in the abstract.' });
+      if (e.quote && !e.quote_found) pair.parts.push({ kind: 'from', key: 'note.quoteMissing' });
       if (e.verdict === 'supported') finish(pair);
       break;
     }
@@ -332,9 +319,7 @@ function reduceEvent(state, e) {
         pair.agent.searches += 1;
         pair.agent.trail.push({ kind: 'search', detail: e.detail, results: e.results || 0 });
         const failed = [...new Set((e.errors || []).map(sourceName))];
-        if (failed.length && !e.results) {
-          pair.agent.trail.push({ kind: 'failed', text: `${listOf(failed)} did not answer`, title: e.errors.join('\n') });
-        }
+        if (failed.length && !e.results) pair.agent.trail.push({ kind: 'failed', sources: failed, title: e.errors.join('\n') });
       } else if (e.action === 'rejected') {
         pair.agent.trail.push({ kind: 'rejected', detail: e.detail });
       }
@@ -349,7 +334,7 @@ function reduceEvent(state, e) {
       if (e.decision === 'replace' && e.paper) {
         // Only a full replacement for a citation that clearly fails is marked in the text as the one to cite.
         const replace = CLEAR_FAILURE.has(pair.verdictKey) && e.check === 'supported';
-        pair.fixData = { type: replace ? 'replace' : 'candidate', paper: e.paper, quote: e.quote || '', checkLine: secondCheck(pair, e) };
+        pair.fixData = { type: replace ? 'replace' : 'candidate', paper: e.paper, quote: e.quote || '', checkLines: secondCheck(pair, e) };
         pair.fix = replace ? 'replace' : 'candidate';
         pair.suggested = e.paper.apa;
       } else if (e.decision === 'revise_claim' && e.revised_claim) {
@@ -379,7 +364,7 @@ function reduceEvent(state, e) {
       if (pair.agent) pair.agent.finished = true;
       pair.failed = true;
       pair.verdictKey = 'error';
-      setVerdict(pair, 'warn', 'This check failed', 'query');
+      setVerdict(pair, 'warn', 'verdict.failed', 'query');
       pair.parts.push({ kind: 'why', text: e.message, lines: 2 });
       finish(pair);
       break;
@@ -396,7 +381,7 @@ function reduceEvent(state, e) {
         if (pair.tone === 'pending') {
           pair.failed = true;
           pair.verdictKey = 'not_checked';
-          setVerdict(pair, 'warn', 'Not checked', 'query');
+          setVerdict(pair, 'warn', 'verdict.notChecked', 'query');
         }
         if (pair.agent) pair.agent.finished = true;
         finish(pair);
@@ -421,23 +406,20 @@ function reduceEvent(state, e) {
 export function reduce(state, action) {
   switch (action.type) {
     case 'begin':
-      return {
-        ...state, check: freshCheck(action.id), notices: [], feedbackOpen: false,
-        status: { kind: 'text', text: 'Starting the check…' }, progress: null,
-      };
+      return { ...state, check: freshCheck(action.id), notices: [], status: say('status.starting'), progress: null };
     case 'event':
       return reduceEvent(state, action.event);
     case 'aborted':
-      return { ...state, status: { kind: 'text', tone: 'warn', text: 'Stopped. The results so far are kept.' }, progress: 'hidden' };
+      return { ...state, status: say('status.stopped', null, 'warn'), progress: 'hidden' };
     case 'failed':
-      return { ...state, status: { kind: 'error', text: action.message }, progress: 'hidden' };
+      return { ...state, status: { kind: 'error', key: action.key, params: action.params, text: action.text }, progress: 'hidden' };
     case 'finished':
       if (!state.check || state.check.id !== action.id) return state;
-      return { ...state, check: { ...state.check, running: false }, feedbackOpen: true };
+      return { ...state, check: { ...state.check, running: false } };
     case 'edit':
-      return { ...state, mode: 'edit', status: null, notices: [], progress: 'hidden', feedbackOpen: false };
+      return { ...state, mode: 'edit', status: null, notices: [], progress: 'hidden' };
     case 'warn':
-      return { ...state, status: { kind: 'text', tone: 'warn', text: action.text } };
+      return { ...state, status: say(action.key, action.params, 'warn') };
     case 'vote':
     case 'why': {
       const c = state.check;

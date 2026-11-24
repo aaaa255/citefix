@@ -2,6 +2,7 @@ import { createContext, useContext, useLayoutEffect, useRef, useState } from 're
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import { Check, Copy, ExternalLink, TriangleAlert, X } from 'lucide-react';
 import { safeUrl } from '../lib/check.js';
+import { useI18n } from '../lib/i18n.jsx';
 
 /* Lucide icons, one stroke width for the whole page. */
 export function Icon({ as: Glyph, className = '', ...props }) {
@@ -62,19 +63,20 @@ export function Clamp({ as: Tag = 'p', className = '', lines = 3, children }) {
 }
 
 export function CopyButton({ label, text }) {
-  const [caption, setCaption] = useState(label);
+  const { t } = useI18n();
+  const [state, setState] = useState(null); // null, 'copy.done' or 'copy.failed', shown for a moment
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      setCaption('Copied');
+      setState('copy.done');
     } catch {
-      setCaption('Copy failed');
+      setState('copy.failed');
     }
-    setTimeout(() => setCaption(label), 1600);
+    setTimeout(() => setState(null), 1600);
   };
   return (
     <button type="button" className="chip-btn" onClick={copy}>
-      <Icon as={Copy} />{caption}
+      <Icon as={Copy} />{state ? t(state) : label}
     </button>
   );
 }

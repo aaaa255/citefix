@@ -1,43 +1,28 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Square } from 'lucide-react';
-import { TESTER_KEY, checkId, initialState, plural, readEvents, reduce } from '../../lib/check.js';
+import { useCheck, useMenu } from '../../lib/CheckContext.jsx';
 import { prefersReducedMotion, useMediaQuery } from '../../lib/hooks.js';
+import { useI18n } from '../../lib/i18n.jsx';
 import { Icon, LayoutContext } from '../ui.jsx';
-import Feedback from './Feedback.jsx';
 import Legend from './Legend.jsx';
 import Note from './Note.jsx';
 import Proof from './Proof.jsx';
 import References from './References.jsx';
 import Status from './Status.jsx';
 
-const PLACEHOLDER = `Paste a passage that cites its sources, for example: “…and rely entirely on attention mechanisms [1].”
-
-Then a line that says References, and one reference per line:
-
-References
-[1] Vaswani, A., et al. (2017). Attention is all you need. NeurIPS.`;
-
-const readTester = () => {
-  try { return localStorage.getItem(TESTER_KEY) || ''; } catch { return ''; }
-};
-
-/* The checker: streams one check from /api/review and writes the results on the passage as proof marks,
-   with each verdict in the margin beside its sentence. */
+/* The checker: the references first (does each paper exist?), then the passage with its marks and each verdict in
+   the margin beside its sentence. The check itself lives in CheckContext; this is its view. */
 export default function Checker() {
-  const [state, dispatch] = useReducer(reduce, initialState);
-  const { mode, check, status, notices, progress, feedbackOpen } = state;
+  const { t } = useI18n();
+  const { state, dispatch, text, setText, exampleLoading, loadExample, run } = useCheck();
+  const { openMenu } = useMenu();
+  const { mode, check, status, notices, progress } = state;
   const running = Boolean(check?.running);
-  const [text, setText] = useState('');
-  const [exampleLoading, setExampleLoading] = useState(false);
   const [hot, setHot] = useState(null);
   const [flash, setFlash] = useState(null);
-  const [tester, setTester] = useState(readTester);
-  const example = useRef({ text: null, load: null });
-  const controller = useRef(null);
   const inputRef = useRef(null);
   const proofRef = useRef(null);
   const notesRef = useRef(null);
-  const feedbackRef = useRef(null);
   const clauses = useRef(new Map());
   const flashTimer = useRef(0);
   const narrow = useMediaQuery('(max-width: 960px)');
@@ -111,21 +96,7 @@ export default function Checker() {
     };
   }, [layout, layoutSoon]);
 
-  /* ---------- the example, fetched as soon as the page opens so Load example rarely has to wait ---------- */
-
-  const fetchExample = useCallback(() => {
-    const ex = example.current;
-    ex.load ||= fetch('/api/example')
-      .then((response) => {
-        if (!response.ok) throw new Error(`The server answered with an error (${response.status}).`);
-        return response.json();
-      })
-      .then((data) => { ex.text = data.text || ''; return ex.text; })
-      .catch((err) => { ex.load = null; throw err; }); // the next click tries again
-    return ex.load;
-  }, []);
-
-  useEffect(() => { fetchExample().catch(() => { /* Load example tries again and says so if it still fails */ }); }, [fetchExample]);
+  /* ---------- actions ---------- */
 
   const focusEditor = () => requestAnimationFrame(() => {
     const input = inputRef.current;
@@ -135,71 +106,11 @@ export default function Checker() {
     input.scrollTop = 0;
   });
 
-  async function loadExample() {
-    if (example.current.text == null) {
-      // Until the text is in the editor, a check would only find an empty passage.
-      setExampleLoading(true);
-      try {
-        await fetchExample();
-      } catch {
-        dispatch({ type: 'warn', text: 'The example could not be loaded.' });
-        return;
-      } finally {
-        setExampleLoading(false);
-      }
-    }
-    setText(example.current.text);
-    dispatch({ type: 'edit' });
-    focusEditor();
-  }
-
-  /* ---------- running a check ---------- */
-
-  async function run() {
-    if (exampleLoading) return;
-    if (running) {
-      controller.current?.abort();
-      return;
-    }
-    const passage = text.trim();
-    if (!passage) {
-      if (mode === 'proof') dispatch({ type: 'edit' });
-      dispatch({ type: 'warn', text: 'Paste a passage and its references first, or load the example.' });
-      focusEditor();
-      return;
-    }
-    const id = checkId();
-    const abort = new AbortController();
-    controller.current = abort;
+  const onLoadExample = async () => { if (await loadExample()) focusEditor(); };
+  const onRun = async () => {
     setHot(null);
-    dispatch({ type: 'begin', id });
-    try {
-      const response = await fetch('/api/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: passage, repair: true }),
-        signal: abort.signal,
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || `The server answered with an error (${response.status}).`);
-      }
-      await readEvents(response.body, (event) => dispatch({ type: 'event', event }));
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        dispatch({ type: 'aborted' });
-      } else {
-        dispatch({
-          type: 'failed',
-          message: err instanceof TypeError
-            ? 'The citefix server could not be reached. Check that it is still running, then try again.'
-            : err.message,
-        });
-      }
-    } finally {
-      dispatch({ type: 'finished', id });
-    }
-  }
+    if (await run() === 'empty') focusEditor();
+  };
 
   /* ---------- moving between the text and its notes ---------- */
 
@@ -220,54 +131,48 @@ export default function Checker() {
     notesRef.current?.querySelector(`[data-sentence="${index}"]`)?.scrollIntoView({ block: 'nearest', behavior: motionBehavior() });
   };
 
-  const jumpToFeedback = () => {
-    const panel = feedbackRef.current;
-    if (!panel) return;
-    panel.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
-    panel.querySelector('input[type="radio"]')?.focus({ preventScroll: true });
-  };
-
-  const vote = useCallback((key, value) => dispatch({ type: 'vote', key, vote: value }), []);
-  const why = useCallback((key, value) => dispatch({ type: 'why', key, text: value }), []);
-  const sent = useCallback((id, sentId) => dispatch({ type: 'sent', checkId: id, id: sentId }), []);
-
-  const usage = check?.usage;
+  const vote = useCallback((key, value) => dispatch({ type: 'vote', key, vote: value }), [dispatch]);
+  const why = useCallback((key, value) => dispatch({ type: 'why', key, text: value }), [dispatch]);
 
   return (
     <LayoutContext.Provider value={layoutSoon}>
       <div className="sheet">
         <div className="sheet-bar">
           <h3 className="sheet-title">
-            Manuscript
+            {t('checker.manuscript')}
             {mode === 'proof' && (
               <button type="button" className="btn btn-text" onClick={() => { dispatch({ type: 'edit' }); focusEditor(); }} disabled={running}>
-                Edit text
+                {t('checker.edit')}
               </button>
             )}
           </h3>
           <div className="sheet-actions">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={loadExample} disabled={running || exampleLoading}>
-              {exampleLoading ? 'Loading example…' : 'Load example'}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onLoadExample} disabled={running || exampleLoading}>
+              {exampleLoading ? t('checker.loadingExample') : t('checker.loadExample')}
             </button>
-            <button type="button" className={`btn btn-sm ${running ? 'btn-ghost' : 'btn-primary'}`} onClick={run} disabled={exampleLoading}>
-              {running ? <><Icon as={Square} />Stop</> : 'Check citations'}
+            <button type="button" className={`btn btn-sm ${running ? 'btn-ghost' : 'btn-primary'}`} onClick={onRun} disabled={exampleLoading}>
+              {running ? <><Icon as={Square} />{t('checker.stop')}</> : t('checker.check')}
             </button>
           </div>
         </div>
 
-        <section className="text-col" aria-label="Manuscript">
-          <label className="visually-hidden" htmlFor="input">Passage and reference list</label>
+        {mode === 'proof' && check && check.references.length > 0 && (
+          <References references={check.references} refs={check.refs} />
+        )}
+
+        <section className="text-col" aria-label={t('checker.manuscript')}>
+          <label className="visually-hidden" htmlFor="input">{t('checker.inputLabel')}</label>
           <textarea
             id="input"
             ref={inputRef}
             className="editor"
             spellCheck={false}
-            placeholder={PLACEHOLDER}
+            placeholder={t('checker.placeholder')}
             value={text}
             hidden={mode !== 'edit'}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onRun(); }
             }}
           />
           {mode === 'proof' && check && (
@@ -286,13 +191,9 @@ export default function Checker() {
           )}
         </section>
 
-        {mode === 'proof' && check && check.references.length > 0 && (
-          <References references={check.references} refs={check.refs} />
-        )}
-
         <aside className="margin-col" aria-labelledby="checks-title">
-          <h3 id="checks-title" className="col-label">Checks</h3>
-          <Status status={status} onJump={jumpToFeedback} />
+          <h3 id="checks-title" className="col-label">{t('checker.checks')}</h3>
+          <Status status={status} onRate={() => openMenu('feedback')} />
           {notices.map((n, i) => <p key={i} className={`notice${n.replay ? ' is-replay' : ''}`}>{n.text}</p>)}
           {progress !== 'hidden' && (
             <div className={`progress${progress == null ? ' is-indeterminate' : ''}`}>
@@ -319,15 +220,9 @@ export default function Checker() {
               })}
             </div>
           )}
-          {feedbackOpen && check && (
-            <Feedback key={check.id} check={check} tester={tester} onTester={setTester} onSent={sent} panelRef={feedbackRef} />
-          )}
           {mode === 'edit' && <Legend />}
         </aside>
       </div>
-      <p className="mt-4 min-h-[1.5em] px-2 text-[13px] tabular-nums text-ink-3">
-        {usage && `Last check${usage.recorded ? ' (recorded)' : ''}: ${usage.seconds} s, ${plural(usage.calls, 'model call')}, ${Number(usage.tokens).toLocaleString('en')} tokens`}
-      </p>
     </LayoutContext.Provider>
   );
 }

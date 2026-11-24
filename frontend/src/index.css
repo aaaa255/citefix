@@ -1,66 +1,76 @@
 @import "tailwindcss";
 @import "./styles/checker.css";
 
-/* citefix tokens.
-   One accent, blue pencil: actions, links, the agent's suggestions. Three verdict inks that only ever mean a verdict:
-   stet green = supported, query amber = partly supported or unclear, proof red = not supported or missing.
-   Shape rule: interactive controls are pills; containers are 20px; pieces inside them (notes, quotes, fields) are 10px. */
+/* citefix tokens: cool white and silver, with fluorescent yellow as the one accent.
+   The yellow is a highlighter: it fills buttons, selections and the agent's suggestions, and is never used for text
+   on a light ground. Verdict inks only ever mean a verdict: green = supported, orange = partly supported or unclear,
+   red = not supported or missing. Shape rule: controls are pills, containers 20px, pieces inside them 10px. */
 
 :root {
   color-scheme: light;
-  --bg: #f4f7fb;
-  --bg-deep: #e8eef8;
-  --surface: #fbfcfe;
-  --surface-2: #f3f6fb;
-  --ink: #0c1626;
-  --ink-2: #39465a;
-  --ink-3: #5a6779;
-  --rule: #e0e6ef;
-  --rule-strong: #c6d0de;
-  --accent: #1f4fd8;
-  --accent-strong: #1840b4;
-  --accent-wash: #e8eefd;
-  --accent-soft: #9db8ff;
-  --on-accent: #f6f8ff;
-  --stet: #157a3c;
-  --stet-wash: #e5f3ea;
-  --query: #8f5404;
-  --query-wash: #fbf0dc;
-  --proof: #bb1529;
-  --proof-wash: #fbe8ea;
-  --shadow: 220 50% 28%;
-  --glass: color-mix(in srgb, var(--surface) 64%, transparent);
-  --glass-edge: rgb(255 255 255 / 0.75);
-  --glass-shine: rgb(255 255 255 / 0.7);
+  --bg: #f2f4f6;
+  --bg-deep: #e6e9ed;
+  --surface: #fbfcfd;
+  --surface-2: #f4f6f8;
+  --ink: #0f1114;
+  --ink-2: #3b4148;
+  --ink-3: #5f6771;
+  --rule: #dfe3e8;
+  --rule-strong: #c3c9d1;
+  --primary: #16181c;
+  --primary-hover: #2a2d33;
+  --on-primary: #f7f8fa;
+  --accent: #fff03b;
+  --accent-strong: #f0de00;
+  --on-accent: #0f1114;
+  --accent-wash: #fffbd2;
+  --stet: #057a34;
+  --stet-mark: #12b257;
+  --stet-wash: #e4f7eb;
+  --query: #b45309;
+  --query-mark: #ef8a00;
+  --query-wash: #fff0d9;
+  --proof: #e00016;
+  --proof-mark: #e00016;
+  --proof-wash: #ffe8ea;
+  --shadow: 215 15% 28%;
+  --glass: color-mix(in srgb, var(--surface) 62%, transparent);
+  --glass-edge: rgb(255 255 255 / 0.85);
+  --glass-shine: rgb(255 255 255 / 0.8);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #060b15;
-    --bg-deep: #0a1220;
-    --surface: #0d1524;
-    --surface-2: #111b2d;
-    --ink: #e7edf6;
-    --ink-2: #b3bfcf;
-    --ink-3: #8f9cae;
-    --rule: #1b2638;
-    --rule-strong: #2b3a50;
-    --accent: #85a6ff;
-    --accent-strong: #a8c0ff;
-    --accent-wash: #14213f;
-    --accent-soft: #4c6fd1;
-    --on-accent: #07101f;
-    --stet: #5cc98a;
-    --stet-wash: #11251a;
-    --query: #e8ae55;
-    --query-wash: #291f10;
-    --proof: #ff7a86;
-    --proof-wash: #2e151a;
-    --shadow: 222 80% 2%;
-    --glass: color-mix(in srgb, var(--surface) 58%, transparent);
-    --glass-edge: rgb(255 255 255 / 0.09);
-    --glass-shine: rgb(255 255 255 / 0.08);
+    --bg: #0b0d10;
+    --bg-deep: #101318;
+    --surface: #14171c;
+    --surface-2: #191d23;
+    --ink: #eef1f4;
+    --ink-2: #b8bfc8;
+    --ink-3: #8b939d;
+    --rule: #232830;
+    --rule-strong: #353c46;
+    --primary: #eef1f4;
+    --primary-hover: #ffffff;
+    --on-primary: #0f1114;
+    --accent: #fff03b;
+    --accent-strong: #fff58a;
+    --on-accent: #0f1114;
+    --accent-wash: rgb(255 240 59 / 0.13);
+    --stet: #3fdc85;
+    --stet-mark: #3fdc85;
+    --stet-wash: #10261a;
+    --query: #ffad42;
+    --query-mark: #ffad42;
+    --query-wash: #2b1f0e;
+    --proof: #ff4f5c;
+    --proof-mark: #ff4f5c;
+    --proof-wash: #2f1317;
+    --shadow: 0 0% 0%;
+    --glass: color-mix(in srgb, var(--surface) 56%, transparent);
+    --glass-edge: rgb(255 255 255 / 0.08);
+    --glass-shine: rgb(255 255 255 / 0.07);
   }
 }
 
@@ -74,14 +84,11 @@
   --color-ink-3: var(--ink-3);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-wash: var(--accent-wash);
-  --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
-  --color-stet: var(--stet);
-  --color-query: var(--query);
-  --color-proof: var(--proof);
+  --color-accent-wash: var(--accent-wash);
   --font-sans: "Geist Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-text: "Literata Variable", "Iowan Old Style", Charter, Georgia, serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
@@ -106,8 +113,8 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
-  ::selection { background: var(--accent-wash); color: var(--ink); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  ::selection { background: var(--accent); color: var(--on-accent); }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
   a { color: inherit; text-decoration: none; }
   [hidden] { display: none !important; }
 }
@@ -123,73 +130,99 @@
     position: relative;
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     height: 44px; padding: 0 20px; border: 1px solid transparent; border-radius: 999px;
-    font: 550 14.5px/1 var(--font-sans); letter-spacing: -0.005em; white-space: nowrap;
+    font: 560 14.5px/1 var(--font-sans); letter-spacing: -0.005em; white-space: nowrap;
     cursor: pointer; user-select: none;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.25s, transform 0.2s var(--ease-soft);
   }
   .btn:active:not(:disabled) { transform: scale(0.98); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn .icon { width: 16px; height: 16px; }
+  /* Graphite, inverted in the dark: it stands out on white and silver without shouting. Yellow stays the highlighter. */
   .btn-primary {
-    background: var(--accent); color: var(--on-accent);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 10px 24px -12px hsl(226 80% 40% / 0.55);
+    background: var(--primary); color: var(--on-primary);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 14px 30px -16px hsl(var(--shadow) / 0.7);
   }
-  .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  /* the arrow on a primary call to action rides in a small light dot and nudges forward on hover */
+  .btn-chip {
+    display: grid; place-items: center; width: 28px; height: 28px; margin-right: -12px; border-radius: 999px;
+    background: var(--on-primary); color: var(--primary);
+    transition: transform 0.35s var(--ease-soft);
+  }
+  .btn-chip .icon { width: 15px; height: 15px; }
+  .btn:hover .btn-chip { transform: translateX(3px); }
   .btn-ink { background: var(--ink); color: var(--bg); }
-  .btn-ink:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 86%, var(--accent)); }
+  .btn-ink:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 84%, var(--bg)); }
   .btn-ghost { background: color-mix(in srgb, var(--surface) 55%, transparent); color: var(--ink); border-color: var(--rule-strong); }
   .btn-ghost:hover:not(:disabled) { border-color: var(--ink-3); background: var(--surface); }
   .btn-sm { height: 36px; padding: 0 15px; font-size: 13.5px; }
-  .btn-text { height: auto; padding: 4px 2px; border-radius: 6px; background: none; color: var(--accent); font-weight: 600; }
-  .btn-text:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+  .btn-text {
+    height: auto; padding: 4px 2px; border-radius: 6px; background: none; color: var(--ink); font-weight: 600;
+    text-decoration: underline; text-decoration-color: var(--rule-strong); text-decoration-thickness: 1.5px; text-underline-offset: 0.25em;
+  }
+  .btn-text:hover { text-decoration-color: var(--ink); }
+
+  /* A highlighter stroke: uneven ink that is heavier where the pen lands and lifts, slightly ragged ends, and it
+     covers the lower part of the line rather than boxing the words in. */
+  .marker-stroke {
+    --hl: color-mix(in srgb, var(--accent) 88%, transparent);
+    --hl-soft: color-mix(in srgb, var(--accent) 58%, transparent);
+    padding: 0 0.3em;
+    margin: 0 -0.1em;
+    background-image:
+      linear-gradient(100deg, transparent 0.4%, var(--accent) 2.6%, var(--hl) 7%, var(--hl-soft) 55%, var(--hl) 92%, var(--accent) 96.5%, transparent 99.4%),
+      linear-gradient(178deg, transparent 0%, var(--hl-soft) 12%, transparent 30%);
+    background-repeat: no-repeat;
+    background-size: 100% 68%, 100% 100%;
+    background-position: 0 78%, 0 0;
+    border-radius: 0.8em 0.3em 0.9em 0.35em / 0.55em 0.65em 0.5em 0.6em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
 
   /* ---------- frosted glass (a web approximation, not Apple's Liquid Glass) ---------- */
   .glass {
     background: var(--glass);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    backdrop-filter: blur(22px) saturate(140%);
     border: 1px solid var(--glass-edge);
     box-shadow: inset 0 1px 0 var(--glass-shine), 0 30px 70px -40px hsl(var(--shadow) / 0.45);
   }
 
-  /* ---------- hero backdrop: fluid canvas, a Gaussian-blur veil, then crisp particles ---------- */
+  /* ---------- hero backdrop: a silver flow, a Gaussian-blur veil, then crisp dust ---------- */
   .fluid-fallback {
     background:
-      radial-gradient(60% 70% at 78% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%),
-      radial-gradient(50% 60% at 95% 85%, color-mix(in srgb, #57c2ec 22%, transparent), transparent 70%),
-      radial-gradient(40% 50% at 55% 0%, color-mix(in srgb, var(--accent-soft) 35%, transparent), transparent 70%),
+      radial-gradient(60% 70% at 78% 30%, color-mix(in srgb, var(--rule-strong) 70%, transparent), transparent 70%),
+      radial-gradient(50% 60% at 95% 85%, color-mix(in srgb, var(--bg-deep) 90%, transparent), transparent 70%),
       var(--bg);
   }
+  /* the Gaussian-blur veil sits only behind the headline; the right side shows the flow sharp and moving */
   .veil {
-    -webkit-backdrop-filter: blur(30px) saturate(135%);
-    backdrop-filter: blur(30px) saturate(135%);
-    background: linear-gradient(100deg,
-      color-mix(in srgb, var(--bg) 62%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 30%, transparent) 36%,
-      transparent 66%);
+    -webkit-backdrop-filter: blur(22px) saturate(110%);
+    backdrop-filter: blur(22px) saturate(110%);
+    background: linear-gradient(100deg, color-mix(in srgb, var(--bg) 58%, transparent) 0%, color-mix(in srgb, var(--bg) 20%, transparent) 45%, transparent 70%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 32%, transparent 64%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 32%, transparent 64%);
   }
-  /* the backdrop melts into the page along eased curves, so no edge shows where it starts or ends */
+
+  .drawer-h { color: var(--ink); font-size: 22px; font-weight: 600; line-height: 1.2; letter-spacing: -0.03em; }
+
+  /* the menu: a frosted sheet that floats in from the right */
+  .drawer-panel {
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid var(--glass-edge);
+    box-shadow: inset 0 1px 0 var(--glass-shine), 0 40px 90px -30px hsl(var(--shadow) / 0.55);
+  }
+  /* the backdrop melts into the page along an eased curve, so no edge shows where it ends */
   .melt-bottom {
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgb(0 0 0 / 0.86) 62%, rgb(0 0 0 / 0.6) 72%, rgb(0 0 0 / 0.3) 83%, rgb(0 0 0 / 0.09) 93%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgb(0 0 0 / 0.86) 62%, rgb(0 0 0 / 0.6) 72%, rgb(0 0 0 / 0.3) 83%, rgb(0 0 0 / 0.09) 93%, transparent 100%);
   }
-  .melt-edges {
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.09) 8%, rgb(0 0 0 / 0.3) 17%, rgb(0 0 0 / 0.6) 27%, rgb(0 0 0 / 0.86) 37%, #000 46%, #000 58%, rgb(0 0 0 / 0.86) 67%, rgb(0 0 0 / 0.6) 77%, rgb(0 0 0 / 0.3) 87%, rgb(0 0 0 / 0.09) 95%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 0.09) 8%, rgb(0 0 0 / 0.3) 17%, rgb(0 0 0 / 0.6) 27%, rgb(0 0 0 / 0.86) 37%, #000 46%, #000 58%, rgb(0 0 0 / 0.86) 67%, rgb(0 0 0 / 0.6) 77%, rgb(0 0 0 / 0.3) 87%, rgb(0 0 0 / 0.09) 95%, transparent 100%);
-  }
 
-  /* the checker's components, shown at a smaller size as previews on the landing page */
-  .demo .proof { max-width: none; font-size: 16px; line-height: 1.8; }
-  .demo .proof p { margin: 0; }
-  .demo .note { padding: 6px 0 0; }
-  .demo .note-body > :first-child { margin-top: 9px; }
-
-  .no-scrollbar { scrollbar-width: none; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
 
   /* the section heading scale, set once */
   .h-section { font-size: clamp(2rem, 3.3vw, 3rem); line-height: 1.06; letter-spacing: -0.032em; font-weight: 580; text-wrap: balance; }
-  .lede { color: var(--ink-2); font-size: 17px; line-height: 1.65; max-width: 60ch; text-wrap: pretty; }
 }
 
 @media (prefers-reduced-transparency: reduce) {

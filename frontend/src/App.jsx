@@ -1,43 +1,77 @@
-import { MotionConfig } from 'motion/react';
-import About from './components/About.jsx';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { MotionConfig, motion, useReducedMotion } from 'motion/react';
 import Checker from './components/checker/Checker.jsx';
-import { Contact, Footer } from './components/Contact.jsx';
+import Footer from './components/Footer.jsx';
 import Hero from './components/Hero.jsx';
-import HowItWorks from './components/HowItWorks.jsx';
+import MenuDrawer from './components/MenuDrawer.jsx';
 import Nav from './components/Nav.jsx';
-import Testing from './components/Testing.jsx';
-import { Reveal } from './components/ui.jsx';
+import { CheckProvider, MenuProvider } from './lib/CheckContext.jsx';
+import { I18nProvider, useI18n } from './lib/i18n.jsx';
+import { RouterProvider, useRouter } from './lib/router.jsx';
 
-function CheckSection() {
+/* A page fades in on arrival and opens at the top; its heading takes focus so screen readers announce the change. */
+function Page({ children, label }) {
+  const reduce = useReducedMotion();
+  const heading = useRef(null);
+  useLayoutEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
+  useEffect(() => { heading.current?.querySelector('h1, h2')?.focus?.({ preventScroll: true }); }, []);
   return (
-    <section id="check" className="relative scroll-mt-4 px-6 pb-12 pt-10 lg:px-10">
+    <motion.main
+      ref={heading}
+      aria-label={label}
+      initial={reduce ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.main>
+  );
+}
+
+function CheckPage() {
+  const { t } = useI18n();
+  return (
+    <section className="px-6 pb-24 pt-28 lg:px-10 lg:pt-32">
       <div className="mx-auto max-w-[1400px]">
-        <Reveal className="mb-10 max-w-3xl">
-          <h2 className="h-section">Paste a passage. Read the margin.</h2>
-          <p className="lede mt-5">
-            Put the text first, then a line that says References, then one reference per line. Each citation gets a mark in
-            the text and a note beside it.
-          </p>
-        </Reveal>
+        <h1 tabIndex={-1} className="h-section mb-9 outline-none">{t('checker.title')}</h1>
         <Checker />
       </div>
     </section>
   );
 }
 
+/* The new page replaces the old one at once and fades in; nothing waits on the old page's exit, so a switch can
+   never stall while the browser holds back frames (a hidden tab, a covered window). */
+function Pages() {
+  const { path } = useRouter();
+  const { t } = useI18n();
+  return path === '/check' ? (
+    <Page key="check" label={t('checker.title')}>
+      <CheckPage />
+      <Footer />
+    </Page>
+  ) : (
+    <Page key="cover" label={t('cover.headline')}>
+      <Hero />
+      <Footer />
+    </Page>
+  );
+}
+
 export default function App() {
   return (
-    <MotionConfig reducedMotion="user">
-      <Nav />
-      <main>
-        <Hero />
-        <CheckSection />
-        <HowItWorks />
-        <Testing />
-        <About />
-        <Contact />
-      </main>
-      <Footer />
-    </MotionConfig>
+    <RouterProvider>
+      <I18nProvider>
+        <CheckProvider>
+          <MenuProvider>
+            <MotionConfig reducedMotion="user">
+              <Nav />
+              <Pages />
+              <MenuDrawer />
+            </MotionConfig>
+          </MenuProvider>
+        </CheckProvider>
+      </I18nProvider>
+    </RouterProvider>
   );
 }

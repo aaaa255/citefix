@@ -16,7 +16,7 @@ Language models write convincing references that do not exist, and real referenc
 2. **Does it support the sentence?** A model (DeepSeek) finds each citation in the passage, then compares the claim with the cited paper's abstract. To call a citation supported, it has to quote the abstract sentence it relied on, and the quote is checked against the abstract.
 3. **If not, which paper does?** An agent with two tools, `search_papers` and `submit`, looks for a paper that supports the claim. Its suggestion is accepted only if the paper came from its own searches, its quote appears in that paper's abstract, and a separate judging call agrees. When the claim itself is wrong, it suggests rewriting the sentence instead of forcing a citation.
 
-The web page writes the results on the passage like proof marks: a green underline for supported, a dotted amber line for partly supported or unclear, a red wave for not supported or not found, and a blue-pencil insertion for the agent's replacement. Each verdict sits in the margin next to its sentence, with the quote it rests on.
+The web page writes the results on the passage like proof marks: a green underline for supported, a dotted orange line for partly supported or unclear, a red wave for not supported or not found, and an insertion highlighted in yellow for the agent's replacement. Each verdict sits in the margin next to its sentence, with the quote it rests on.
 
 ## Run it
 

@@ -1,14 +1,16 @@
 import { Fragment, useMemo } from 'react';
 import { proofLayout, splitMarkers, worstTone } from '../../lib/check.js';
+import { useI18n } from '../../lib/i18n.jsx';
 import { CaretMark } from '../ui.jsx';
 
 const noop = () => false;
 
 /* The manuscript as a proof: each checked sentence is underlined in the ink of its worst verdict, each citation
-   number in its own verdict's ink, and a "Cite instead" fix is written in after the sentence in blue pencil. */
+   number in its own verdict's ink, and a "Cite instead" fix is written in after the sentence with a highlighter. */
 export default function Proof({
   body, citations, pairs, order, hot = null, onHot = noop, onClause = noop, onMarker = noop, clauses, innerRef,
 }) {
+  const { t } = useI18n();
   const paragraphs = useMemo(() => proofLayout(body, citations), [body, citations]);
   const bySentence = useMemo(() => {
     const map = new Map();
@@ -21,7 +23,7 @@ export default function Proof({
   }, [pairs, order]);
 
   return (
-    <article ref={innerRef} className="proof" aria-label="Manuscript with marks">
+    <article ref={innerRef} className="proof" aria-label={t('checker.proofLabel')}>
       {paragraphs.map((paragraph) => (
         <p key={paragraph.key}>
           {paragraph.pieces.map((piece, i) => (piece.clause == null
@@ -37,6 +39,7 @@ export default function Proof({
                 onClause={onClause}
                 onMarker={onMarker}
                 clauses={clauses}
+                t={t}
               />
             )))}
         </p>
@@ -45,7 +48,7 @@ export default function Proof({
   );
 }
 
-function Clause({ index, text, pairs, hot, onHot, onClause, onMarker, clauses }) {
+function Clause({ index, text, pairs, hot, onHot, onClause, onMarker, clauses, t }) {
   const segments = useMemo(() => splitMarkers(text), [text]);
   const tone = pairs.length ? worstTone(pairs.map((p) => p.tone)) : 'pending';
   const byRef = new Map(pairs.map((p) => [p.ref, p]));
@@ -76,7 +79,7 @@ function Clause({ index, text, pairs, hot, onHot, onClause, onMarker, clauses })
             <span
               key={i}
               className={classes}
-              title={mine.map((p) => `[${p.ref}] ${p.label}`).join('\n') || undefined}
+              title={mine.map((p) => `[${p.ref}] ${t(p.label)}`).join('\n') || undefined}
               onClick={(e) => {
                 // a number leads to its own note, not the sentence's first one
                 if (seg.refs.length && onMarker(index, seg.refs[0])) e.stopPropagation();
@@ -88,7 +91,7 @@ function Clause({ index, text, pairs, hot, onHot, onClause, onMarker, clauses })
         })}
       </span>
       {replaced.map((p) => (
-        <ins key={p.key} className="insert" title="Suggested citation">
+        <ins key={p.key} className="insert" title={t('fix.suggested')}>
           <CaretMark />{p.fixData.paper.short}
         </ins>
       ))}

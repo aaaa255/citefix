@@ -22,8 +22,18 @@ For the replay mode, start the API with
 
 ## Where things are
 
-- `src/content.js`: your name, photo, bio and links for the About and Contact sections.
-- `src/lib/check.js`: the check's state, rebuilt from the server's events (mirrors `app.js`).
-- `src/components/checker/`: the manuscript, margin notes, references and feedback panel.
-- `src/components/HeroBackdrop.jsx`: the WebGL fluid, the blur veil and the dust that follows the pointer.
-- `src/data/recorded-check.json`: a copy of `eval/results/web-run.ndjson`, shown on the landing page as a recorded check.
+Two pages: the cover at `/` and the checker at `/check` (the Python server answers both with the page).
+
+- `src/content.js`: where the Contact button and the footer link to.
+- `src/lib/i18n.jsx`: every word the page shows, in English (the default), Chinese and Spanish; a language picked in
+  Settings is remembered. Explanations from the model and quotes from abstracts are shown as they come.
+- `src/lib/check.js`: the check's state, rebuilt from the server's events (mirrors `app.js`), as translation keys.
+- `src/lib/CheckContext.jsx`: the running check and the menu, shared by both pages.
+- `src/lib/router.jsx`: the two pages, kept in the address bar.
+- `src/components/Hero.jsx` and `HeroBackdrop.jsx`: the cover, its silver WebGL flow, the blur veil, and the dot
+  field that waves, bulges around the pointer and ripples on a click.
+- `src/components/LoopDemo.jsx`: the cover's looping demo (typing, Check, then the recorded results).
+- `src/components/MenuDrawer.jsx`: the menu that slides out on the right: About, Feedback ("How did citefix do?"
+  for the latest check) and Settings (language and your name).
+- `src/components/checker/`: the references, the manuscript, margin notes and the feedback form.
+- `src/data/recorded-check.json`: a copy of `eval/results/web-run.ndjson`; the cover replays three of its citations.

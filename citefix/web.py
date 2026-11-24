@@ -2,6 +2,7 @@
 
 GET  /             the page: the React build in frontend/dist (cd frontend && npm install && npm run build),
                    or the classic page in citefix/web/ when there is no build
+GET  /check        the same page; the React page opens on its checker there
 GET  /api/example  the example passage
 POST /api/review   {"text": ..., "repair": true} -> a stream of JSON lines, one event per line
 POST /api/feedback a tester's votes and comments on one check (see feedback.py)
@@ -27,6 +28,7 @@ from .review import review_passage
 WEB_DIR = Path(__file__).resolve().parent / "web"  # the classic page: plain HTML, CSS and JavaScript
 BUILD_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"  # the React page, once it is built
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "passage.txt"
+PAGES = {"/", "/index.html", "/check"}  # paths that answer with the page; the React page shows the checker at /check
 TYPES = {  # the only kinds of file the page folder may serve
     ".html": "text/html; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
@@ -95,7 +97,7 @@ def page_dir() -> Path:
 def static_file(path: str) -> Path | None:
     """The file a GET path names in the page folder: a known type, inside the folder, or None."""
     root = page_dir().resolve()
-    name = "index.html" if path in ("/", "/index.html") else path.lstrip("/")
+    name = "index.html" if path in PAGES else path.lstrip("/")
     try:
         file = (root / name).resolve()
         if file.suffix.lower() in TYPES and file.is_relative_to(root) and file.is_file():

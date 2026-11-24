@@ -1,23 +1,27 @@
 import { useState } from 'react';
-import { TESTER_KEY, feedbackPayload, plural } from '../../lib/check.js';
+import { feedbackPayload } from '../../lib/check.js';
+import { useCheck } from '../../lib/CheckContext.jsx';
+import { useI18n } from '../../lib/i18n.jsx';
 
 const RATINGS = [1, 2, 3, 4, 5];
 
-/* After a check: how many notes were marked, a rating, a comment and an optional name. Nothing is sent until the
-   tester presses the button. Keyed by the check, so a new check starts with an empty form. */
-export default function Feedback({ check, tester, onTester, onSent, panelRef }) {
+/* "How did citefix do?", in the menu: how many notes were marked, a rating and a comment for the latest check.
+   Nothing is sent until the tester presses the button. Keyed by the check, so a new check starts with an empty form. */
+export default function Feedback({ check }) {
+  const { t } = useI18n();
+  const { dispatch, tester } = useCheck();
   const [rating, setRating] = useState(null);
   const [comment, setComment] = useState('');
-  const [line, setLine] = useState({ text: '', tone: '' });
+  const [line, setLine] = useState({ key: '', tone: '' });
   const [sending, setSending] = useState(false);
   const [sentAs, setSentAs] = useState(null); // the payload last sent, to tell when something changed since
 
   const pairs = check.order.map((key) => check.pairs[key]);
   const votable = pairs.filter((p) => p.votable);
   const marked = votable.filter((p) => p.vote).length;
-  let marks = `You marked ${marked} of ${plural(votable.length, 'note')}.`;
-  if (!votable.length) marks = 'Nothing was checked this time, but a comment still helps.';
-  else if (!marked) marks = 'Mark each note above Yes or No if you can tell whether it is right.';
+  let marks = t('fb.marked', { marked, total: votable.length });
+  if (!votable.length) marks = t('fb.nothing');
+  else if (!marked) marks = t('fb.markSome');
 
   const payload = feedbackPayload(check, { rating, comment, tester });
   const body = JSON.stringify(payload);
@@ -26,64 +30,58 @@ export default function Feedback({ check, tester, onTester, onSent, panelRef }) 
 
   async function send() {
     if (!payload.citations.some((c) => c.vote) && !payload.rating && !payload.comment) {
-      setLine({ text: 'Mark a note right or wrong, choose a rating or write a comment first.', tone: 'error' });
+      setLine({ key: 'fb.empty', tone: 'error' });
       return;
     }
-    try { localStorage.setItem(TESTER_KEY, payload.tester); } catch { /* storage blocked: the name is not remembered */ }
     setSending(true);
-    setLine({ text: 'Sending…', tone: '' });
+    setLine({ key: 'fb.sending', tone: '' });
     try {
       const response = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || `The server answered with an error (${response.status}).`);
-      onSent(check.id, data.id);
+      if (!response.ok) throw new Error(data.message || t('status.serverError', { code: response.status }));
+      dispatch({ type: 'sent', checkId: check.id, id: data.id });
       setSentAs(body);
-      setLine({ text: 'Thank you, your feedback was sent.', tone: 'sent' });
+      setLine({ key: 'fb.thanks', tone: 'sent' });
     } catch (err) {
-      setLine({
-        text: err instanceof TypeError ? 'The citefix server could not be reached. Try again in a moment.' : err.message,
-        tone: 'error',
-      });
+      setLine(err instanceof TypeError ? { key: 'fb.unreachable', tone: 'error' } : { text: err.message, tone: 'error' });
     } finally {
       setSending(false);
     }
   }
 
-  const label = sent ? (changed ? 'Send update' : 'Sent') : 'Send feedback';
-  const state = changed && !sending ? { text: 'Changes not sent yet.', tone: '' } : line;
+  const label = sent ? (changed ? t('fb.update') : t('fb.sent')) : t('fb.send');
+  const state = changed && !sending ? { key: 'fb.changed', tone: '' } : line;
 
   return (
-    <section ref={panelRef} className="feedback" aria-labelledby="feedback-title">
-      <h3 id="feedback-title">How did citefix do?</h3>
+    <section className="feedback" aria-labelledby="feedback-title">
+      <h3 id="feedback-title">{t('fb.title')}</h3>
       <p className="feedback-marks">{marks}</p>
       <fieldset className="rating">
-        <legend>How useful was this check?</legend>
+        <legend>{t('fb.useful')}</legend>
         <div className="rating-scale">
           {RATINGS.map((n) => (
             <label key={n}>
               <input type="radio" name={`rating-${check.id}`} value={n} checked={rating === n} onChange={() => setRating(n)} />
               <span className="box">
                 {n}
-                {n === 1 && <span className="visually-hidden">, not useful</span>}
-                {n === 5 && <span className="visually-hidden">, very useful</span>}
+                {n === 1 && <span className="visually-hidden">, {t('fb.notUseful')}</span>}
+                {n === 5 && <span className="visually-hidden">, {t('fb.veryUseful')}</span>}
               </span>
             </label>
           ))}
         </div>
-        <p className="rating-ends" aria-hidden="true"><span>Not useful</span><span>Very useful</span></p>
+        <p className="rating-ends" aria-hidden="true"><span>{t('fb.notUseful')}</span><span>{t('fb.veryUseful')}</span></p>
       </fieldset>
-      <label className="field-label" htmlFor="fb-comment">What was wrong, confusing or missing?</label>
+      <label className="field-label" htmlFor="fb-comment">{t('fb.comment')}</label>
       <textarea id="fb-comment" className="field" rows={3} maxLength={4000} value={comment} onChange={(e) => setComment(e.target.value)} />
-      <label className="field-label" htmlFor="fb-tester">Your name or initials <span className="optional">(optional)</span></label>
-      <input id="fb-tester" className="field" type="text" maxLength={60} autoComplete="nickname" value={tester} onChange={(e) => onTester(e.target.value)} />
-      <p className="feedback-fine">
-        Sending shares your marks, rating and comment with the citefix developer, together with the cited sentences and
-        references from this check. Nothing is sent until you press the button.
-      </p>
+      <p className="feedback-fine">{t('fb.fine')}</p>
       <div className="feedback-actions">
         <button type="button" className="btn btn-primary btn-sm" onClick={send} disabled={sending || (sent && !changed)}>{label}</button>
-        <span className={`feedback-state${state.tone ? ` is-${state.tone}` : ''}`} role="status" aria-live="polite">{state.text}</span>
+        <span className={`feedback-state${state.tone ? ` is-${state.tone}` : ''}`} role="status" aria-live="polite">
+          {state.key ? t(state.key) : state.text}
+        </span>
       </div>
+      <p className="feedback-fine">{tester.trim() ? t('fb.signed', { name: tester.trim() }) : t('fb.unsigned')}</p>
     </section>
   );
 }
