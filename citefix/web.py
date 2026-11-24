@@ -1,6 +1,8 @@
 """Web app: python -m citefix serve [--host 127.0.0.1] [--port 8765]
 
-GET  /             the page (citefix/web/)
+GET  /             the page: the React build in frontend/dist (cd frontend && npm install && npm run build),
+                   or the classic page in citefix/web/ when there is no build
+GET  /check        the same page; the React page opens on its checker there
 GET  /api/example  the example passage
 POST /api/review   {"text": ..., "repair": true} -> a stream of JSON lines, one event per line
 POST /api/feedback a tester's votes and comments on one check (see feedback.py)
@@ -23,17 +25,26 @@ from pathlib import Path
 from . import feedback, llm
 from .review import review_passage
 
-WEB_DIR = Path(__file__).resolve().parent / "web"
+WEB_DIR = Path(__file__).resolve().parent / "web"  # the classic page: plain HTML, CSS and JavaScript
+BUILD_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"  # the React page, once it is built
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "passage.txt"
-STATIC = {
-    "/": ("index.html", "text/html; charset=utf-8"),
-    "/index.html": ("index.html", "text/html; charset=utf-8"),
-    "/style.css": ("style.css", "text/css; charset=utf-8"),
-    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-    "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+PAGES = {"/", "/index.html", "/check"}  # paths that answer with the page; the React page shows the checker at /check
+TYPES = {  # the only kinds of file the page folder may serve
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".ico": "image/x-icon",
 }
+# Fonts come from the page's own folder (React build) or Google Fonts (classic page).
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
-       "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+       "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
        "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 MAX_CHARS = 20_000
 _running = threading.BoundedSemaphore(2)  # at most two checks at once
@@ -78,6 +89,24 @@ class _Quota:
             return None
 
 
+def page_dir() -> Path:
+    """The folder the page is served from: the React build when there is one, else the classic page."""
+    return BUILD_DIR if (BUILD_DIR / "index.html").is_file() else WEB_DIR
+
+
+def static_file(path: str) -> Path | None:
+    """The file a GET path names in the page folder: a known type, inside the folder, or None."""
+    root = page_dir().resolve()
+    name = "index.html" if path in PAGES else path.lstrip("/")
+    try:
+        file = (root / name).resolve()
+        if file.suffix.lower() in TYPES and file.is_relative_to(root) and file.is_file():
+            return file
+    except (OSError, ValueError):  # a name the file system cannot even look up
+        pass
+    return None
+
+
 QUOTA = _Quota(PER_IP_PER_HOUR, DAILY_LIMIT, ("check", "checks"))
 # Generous per address because a class on one campus network shares an IP; 500 a day stays inside
 # GitHub's limit on commits made through its API.
@@ -89,19 +118,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_HEAD(self) -> None:
         path = self.path.split("?", 1)[0]
-        self.send_response(HTTPStatus.OK if path in STATIC else HTTPStatus.NOT_FOUND)
+        self.send_response(HTTPStatus.OK if static_file(path) else HTTPStatus.NOT_FOUND)
         self.end_headers()
 
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0]
-        if path in STATIC:
-            name, content_type = STATIC[path]
-            self._send(HTTPStatus.OK, (WEB_DIR / name).read_bytes(), content_type)
-        elif path == "/api/example":
+        if path == "/api/example":
             text = EXAMPLE.read_text(encoding="utf-8") if EXAMPLE.is_file() else ""
-            self._send_json(HTTPStatus.OK, {"text": text})
-        else:
-            self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain; charset=utf-8")
+            return self._send_json(HTTPStatus.OK, {"text": text})
+        file = static_file(path)
+        if not file:
+            return self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain; charset=utf-8")
+        # The build's /assets/ files carry a content hash in their names, so a browser may keep them for good.
+        cache = "public, max-age=31536000, immutable" if path.startswith("/assets/") else "no-cache"
+        self._send(HTTPStatus.OK, file.read_bytes(), TYPES[file.suffix.lower()], cache)
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
@@ -234,13 +264,13 @@ class Handler(BaseHTTPRequestHandler):
                 return forwarded.split(",")[0].strip()
         return self.client_address[0]
 
-    def _send(self, status: HTTPStatus, body: bytes, content_type: str) -> None:
+    def _send(self, status: HTTPStatus, body: bytes, content_type: str, cache: str = "no-cache") -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Security-Policy", CSP)
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", cache)
         self.end_headers()
         self.wfile.write(body)
 
@@ -260,6 +290,11 @@ def serve(host: str = "127.0.0.1", port: int = 8765, record: str | None = None, 
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"citefix is running at http://{'localhost' if host == '127.0.0.1' else host}:{port}  (Ctrl+C stops it)",
           flush=True)
+    if page_dir() == BUILD_DIR:
+        print("Page: the React build in frontend/dist", flush=True)
+    else:
+        print("Page: the classic page in citefix/web (for the new one: cd frontend && npm install && npm run build)",
+              flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

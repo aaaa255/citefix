@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Plain HTML, CSS and JavaScript with no build step, served by the project's own Python standard-library server (`python -m citefix serve`). Chosen by the user.
+React with Vite, Tailwind CSS, Motion (Framer Motion) and Lucide React in `frontend/`, chosen by the user on 2026-11-24. The build (`frontend/dist`) is served by the project's own Python standard-library server (`python -m citefix serve`), which falls back to the earlier plain HTML, CSS and JavaScript page in `citefix/web/` when there is no build. The Dockerfile builds the page with Node before the Python stage.
 
 ## Users
 
