@@ -1,0 +1,494 @@
+{
+  "about": "Introduction paragraphs of open-access papers (CC BY or CC0, attributed in each passage's source), with their citations renumbered in order of appearance. The citations were written by the papers' authors, so most are fair uses, which makes this a test of false alarms. Each reference was looked up in OpenAlex, Crossref and PubMed, and each citation judged against the cited paper's abstract. Labels by Claude (AI), made before citefix was run on these passages, and not yet reviewed by a person. In references, label is real, real_error (a detail is wrong in the original paper's list), or unindexed (a report or web page that scholarly indexes do not hold). In citations, accept lists the step 2 verdicts that count as right (null when the source is not a paper with an abstract); claim, when given, tells two citations of one reference in one sentence apart; why says what the abstract does and does not say.",
+  "passages": [
+    {
+      "id": "oa01",
+      "topic": "Inhibitory control during selective retrieval may hinder subsequent analogical thinking",
+      "source": {
+        "pmcid": "PMC6372166",
+        "title": "Inhibitory control during selective retrieval may hinder subsequent analogical thinking",
+        "journal": "PLoS ONE",
+        "year": "2019",
+        "doi": "10.1371/journal.pone.0211881",
+        "licence": "CC BY"
+      },
+      "text": "However, there is some controversy on whether the possible impact of previous knowledge can influence analogical reasoning in both explicit and implicit manners. For example, it has been argued that awareness of encoding and retrieval processes is required to flexible application of knowledge in successful analogical transfer [1, 2]. In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7]. Gick and Holyoak [4], for example, had participants generate a solution to treat a tumor without using radiation that would destroy the surrounding tissue. In the control condition where no analogical source was presented, only a 10% of participants came up with the solution. When previously provided with a similar solution but applied in a different incidental context without any hint that they could use the solution to approach the target problem, about 30% of participants generated analogous solutions. Notably, when these participants were explicitly told that remembering the previous story might be helpful to produce a solution to the problem, the percentage of convergence solutions increased to 80%. These results suggest that spontaneous access to potential useful analogies may be difficult even when they are available in memory, unless explicit cues are provided.\n\nReferences\n[1] Cohen, N., Poldrack, R., & Eichenbaum, H. (1997). Memory for Items and Memory for Relations in the Procedural/Declarative Memory Framework. Memory, 5(1–2), 131–78. https://doi.org/10.1080/741941149\n[2] Reber, P., Knowlton, B., & Squire, L. (1996). Dissociable Properties of Memory Systems: Differences in the Flexibility of Declarative and Nondeclarative Knowledge. Behav Neurosci, 110(5), 861–71. https://doi.org/10.1037//0735-7044.110.5.861\n[3] Gick, L., & Holyoak, K. (1980). Analogical Problem Solving. Cogn Psychol, 12, 306–55.\n[4] Gick, L., & Holyoak, K. (1983). Schema Induction and Analogical Transfer. Cogn Psychol, 15, 1–38.\n[5] Novick, L., & Holyoak, K. (1991). Mathematical problem solving by analogy. J Exp Psychol Learn Mem Cogn, 17(3), 398–415. https://doi.org/10.1037//0278-7393.17.3.398\n[6] Gentner, D., Rattermann, M., & Forbus, K. (1993). The Roles of Similarity in Transfer: Separating Retrievability From Inferential Soundness. Cogn Psychol, 25(4), 524–75. https://doi.org/10.1006/cogp.1993.1013\n[7] Perfetto, G., Bransford, J., & Franks, J. (1983). Constraints on access in a problem solving context. Mem Cognit, 11(1), 24–31. https://doi.org/10.3758/bf03197658",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "note": "The first author's initials are given as L.; she is Mary L. Gick. No abstract in the indexes."
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "note": "The first author's initials are given as L.; she is Mary L. Gick. No abstract in the indexes."
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 6,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 7,
+          "label": "real",
+          "note": "No abstract in the indexes."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "For example, it has been argued that awareness of encoding and retrieval processes is required to flexible application of knowledge in successful analogical transfer [1, 2].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "The abstract says declarative memory is relational and flexible and implicit memory is not; analogical transfer is not mentioned."
+        },
+        {
+          "ref": 2,
+          "sentence": "For example, it has been argued that awareness of encoding and retrieval processes is required to flexible application of knowledge in successful analogical transfer [1, 2].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Amnesic patients learned a task normally but could not use the knowledge flexibly in transfer tests: declarative memory supports flexible transfer. Analogy is not mentioned."
+        },
+        {
+          "ref": 3,
+          "sentence": "In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7].",
+          "accept": null,
+          "why": "No abstract in the indexes."
+        },
+        {
+          "ref": 4,
+          "sentence": "In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7].",
+          "accept": null,
+          "why": "No abstract in the indexes."
+        },
+        {
+          "ref": 5,
+          "sentence": "In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Subjects received hints designed to ease the processes of analogical transfer; the abstract does not say the hints prompted recall of the earlier problem."
+        },
+        {
+          "ref": 6,
+          "sentence": "In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence",
+            "not_supported"
+          ],
+          "why": "The study asks what makes stories come to mind and seem sound; it does not use cues to increase transfer."
+        },
+        {
+          "ref": 7,
+          "sentence": "In this line, some studies have used explicit cues to prompt participants to remember analogous previous problems as a way of increasing transfer effects [3, 4, 5, 6, 7].",
+          "accept": null,
+          "why": "No abstract in the indexes."
+        },
+        {
+          "ref": 4,
+          "sentence": "Gick and Holyoak [4], for example, had participants generate a solution to treat a tumor without using radiation that would destroy the surrounding tissue.",
+          "accept": null,
+          "why": "No abstract in the indexes."
+        }
+      ]
+    },
+    {
+      "id": "oa02",
+      "topic": "Microplastics in Lake Mead National Recreation Area, USA: Occurrence and biological uptake",
+      "source": {
+        "pmcid": "PMC7197774",
+        "title": "Microplastics in Lake Mead National Recreation Area, USA: Occurrence and biological uptake",
+        "journal": "PLoS ONE",
+        "year": "2020",
+        "doi": "10.1371/journal.pone.0228896",
+        "licence": "CC0"
+      },
+      "text": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5]. There is a general lack of information on microplastic occurrence and biological uptake in freshwater in the western portion of the continent, and especially the arid southwestern U.S. This investigation presents the first assessment of microplastic occurrence and biological uptake in two large reservoirs in the Mojave Desert, Lakes Mead and Mohave, located in Lake Mead National Recreation Area (LMNRA), a unit of the U.S. National Park Service. We report microplastic concentrations in water, surficial sediment, fish, and shellfish across a gradient of anthropogenic impacts to test the hypothesis that higher microplastic concentrations will be found in areas with higher anthropogenic impact. Additionally, we report microplastic concentrations from a sediment core representing ~19 years of deposition to test the hypothesis that rates of microplastic deposition have increased over time. Results from this study provide an initial baseline for microplastic occurrence and biological uptake in two large reservoirs along the Colorado River, in addition to an initial understanding of how human population density influences microplastic concentrations in a largely undeveloped watershed.\n\nReferences\n[1] Baldwin, A., Corsi, S., & Mason, S. (2016). Plastic Debris in 29 Great Lakes Tributaries: Relations to Watershed Attributes and Hydrology. Environ Sci Technol, 50(19), 10377–85. https://doi.org/10.1021/acs.est.6b02917\n[2] Eriksen, M., Mason, S., Wilson, S., Box, C., Zellers, A., & Edwards, W. (2013). Microplastic pollution in the surface waters of the Laurentian Great Lakes. Mar Pollut Bull, 77(1–2), 177–82. https://doi.org/10.1016/j.marpolbul.2013.10.007\n[3] Corcoran, P., Norris, T., Ceccanese, T., Walzak, M., Helm, P., & Marvin, C. (2015). Hidden plastics of Lake Ontario, Canada and their potential preservation in the sediment record. Environ Pollut, 204, 17–25. https://doi.org/10.1016/j.envpol.2015.04.009\n[4] Ballent, A., Corcoran, P., Madden, O., Helm, P., & Longstaffe, F. (2016). Sources and sinks of microplastics in Canadian Lake Ontario nearshore, tributary and beach sediments. Mar Pollut Bull, 110(1), 383–95. https://doi.org/10.1016/j.marpolbul.2016.06.037\n[5] Hoellein, T., McCormick, A., Hittie, J., London, M., Scott, J., & Kelly, J. (2017). Longitudinal patterns of microplastic concentration and bacterial assemblages in surface and benthic habitats of an urban river. Freshw Sci., 000.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "note": "The volume is given as 000."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5].",
+          "accept": [
+            "supported",
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "A study of 29 Great Lakes tributaries: one example of the Great Lakes work the sentence describes, though no abstract can say the field primarily focused there."
+        },
+        {
+          "ref": 2,
+          "sentence": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5].",
+          "accept": [
+            "supported",
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "A survey of the Laurentian Great Lakes' surface waters: an example, as above."
+        },
+        {
+          "ref": 3,
+          "sentence": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5].",
+          "accept": [
+            "supported",
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "A study of Lake Ontario: an example, as above."
+        },
+        {
+          "ref": 4,
+          "sentence": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5].",
+          "accept": [
+            "supported",
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "A study of Lake Ontario sediments: an example, as above."
+        },
+        {
+          "ref": 5,
+          "sentence": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region [1, 2, 3, 4, 5].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "A study of an urban river; the abstract does not say where, so it cannot show the Great Lakes."
+        }
+      ]
+    },
+    {
+      "id": "oa03",
+      "topic": "People versus machines in the UK: Minimum wages, labor reallocation and automatable jobs",
+      "source": {
+        "pmcid": "PMC6886789",
+        "title": "People versus machines in the UK: Minimum wages, labor reallocation and automatable jobs",
+        "journal": "PLoS ONE",
+        "year": "2019",
+        "doi": "10.1371/journal.pone.0224789",
+        "licence": "CC BY"
+      },
+      "text": "There are no shortage of papers that consider the effects of the minimum wage in the UK. In general, these studies have focused on potential changes to employment opportunities for the low skilled, and the majority suggest that overall employment effects are minimal [1, 2]. However, there is evidence that specific sub groups do lose out on employment opportunities when the minimum wage increases. This underlines the importance of considering differential effects at the individual level to understand completely who the winners and losers are. Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6]. In addition, there is evidence of a significant amount of job switching for low-paid workers after minimum wage increases, which has associated costs [7].\n\nReferences\n[1] Hafner, M., Taylor, J., Pankowska, P., Stepanek, M., Nataraj, S., & van Stolk, C. (2017). The Impact of The National Minimum Wage On Employment: A Meta-Analysis RAND Europe.\n[2] de Linde, M., Megan, Stanley, T., & Doucouliagos, H. (2014). Does the UK Minimum Wage Reduce Employment? A Meta-Regression Analysis. British Journal of Industrial Relations, 52(3), 499–520.\n[3] Dickens, R., Riley, R., & Wilkinson, D. (2015). A Re‐examination of the Impact of the UK National Minimum Wage on Employment. Economica, 82(328), 841–864.\n[4] Bewley, H., & Wilkinson, D. (2015). The Impact of the National Minimum Wage on Employment and Hours. National Institute of Economic and Social Research.\n[5] Fidrmuc J, Tena JD. National Minimum Wage and Employment of Young Workers in the UK. CESifo Working Paper Series. 2013; No 4286, June.\n[6] Machin, S., & Wilson, J. (2014). Minimum wages in a low-wage labour market: Care homes in the UK. Economic Journal, 114(494), C102–C109.\n[7] Papps, K., & Gregg, P. (2014). Beyond the wage: Changes in employment and compensation patterns in response to the national minimum wage. Low Pay Commission.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "note": "A RAND Europe report with a DOI; no abstract in the indexes."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "note": "The first author is Megan de Linde Leonard; the list garbles her name."
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "unindexed",
+          "note": "A NIESR report that the scholarly indexes do not hold; the closest record is a different paper."
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "note": "A CESifo working paper, found through SSRN."
+        },
+        {
+          "n": 6,
+          "label": "real_error",
+          "note": "The year is 2014 in the list; the paper appeared in 2004 (Economic Journal 114(494))."
+        },
+        {
+          "n": 7,
+          "label": "real",
+          "note": "A Low Pay Commission report, found in a university repository."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "In general, these studies have focused on potential changes to employment opportunities for the low skilled, and the majority suggest that overall employment effects are minimal [1, 2].",
+          "accept": null,
+          "why": "A report with no abstract in the indexes."
+        },
+        {
+          "ref": 2,
+          "sentence": "In general, these studies have focused on potential changes to employment opportunities for the low skilled, and the majority suggest that overall employment effects are minimal [1, 2].",
+          "accept": [
+            "supported"
+          ],
+          "why": "A meta-analysis of 16 UK studies finds no overall practically significant adverse employment effect."
+        },
+        {
+          "ref": 3,
+          "sentence": "Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6].",
+          "accept": [
+            "supported"
+          ],
+          "why": "Part-time females, the most vulnerable workers, see reduced employment retention under the minimum wage.",
+          "claim": "Part-time women lose employment opportunities when the minimum wage increases."
+        },
+        {
+          "ref": 4,
+          "sentence": "Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6].",
+          "accept": null,
+          "why": "A report the indexes do not hold."
+        },
+        {
+          "ref": 3,
+          "sentence": "Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "The abstract reports the effect for part-time women only, not for part-time workers in general.",
+          "claim": "Part-time workers in general lose employment opportunities when the minimum wage increases."
+        },
+        {
+          "ref": 5,
+          "sentence": "Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6].",
+          "accept": [
+            "not_supported",
+            "insufficient_evidence"
+          ],
+          "why": "The abstract is about young workers at the age thresholds, not service industry employees."
+        },
+        {
+          "ref": 6,
+          "sentence": "Specifically, those that lose are part-time women [3, 4], part-time workers in general [3], service industry employees [5] and care home workers [6].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "In care homes the minimum wage had sizeable wage effects and some evidence of employment reductions."
+        },
+        {
+          "ref": 7,
+          "sentence": "In addition, there is evidence of a significant amount of job switching for low-paid workers after minimum wage increases, which has associated costs [7].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "The minimum wage lowers the chance of staying in the same job, and many workers change firms; costs are not mentioned."
+        }
+      ]
+    },
+    {
+      "id": "oa04",
+      "topic": "A randomised controlled trial of the 5:2 diet",
+      "source": {
+        "pmcid": "PMC8598045",
+        "title": "A randomised controlled trial of the 5:2 diet",
+        "journal": "PLoS ONE",
+        "year": "2021",
+        "doi": "10.1371/journal.pone.0258853",
+        "licence": "CC BY"
+      },
+      "text": "The prevalence of obesity is high worldwide [1], especially among disadvantaged socioeconomic groups in high-income countries [2, 3]. Obesity is associated with a number of adverse health conditions that long-term weight loss can improve [4].\n\nReferences\n[1] Bluher, M. (2019). Obesity: global epidemiology and pathogenesis. Nat Rev Endocrinol, 15(5), 288–98. https://doi.org/10.1038/s41574-019-0176-8\n[2] Zaninotto, P., Head, J., Stamatakis, E., Wardle, H., & Mindell, J. (2009). Trends in obesity among adults in England from 1993 to 2004 by age and social class and projections of prevalence to 2012. Journal of Epidemiology & Community Health, 63(2), 140–6. https://doi.org/10.1136/jech.2008.077305\n[3] Ayala-Marín, A., Iguacel, I., Miguel-Etayo, P., & Moreno, L. (2020). Consideration of Social Disadvantages for Understanding and Preventing Obesity in Children. Frontiers in Public Health, 8, 423. https://doi.org/10.3389/fpubh.2020.00423\n[4] Poobalan, A., Aucott, L., Smith, W., Avenell, A., Jung, R., & Broom, J. (2007). Long-term weight loss effects on all cause mortality in overweight/obese populations. Obes Rev, 86, 503–13. https://doi.org/10.1111/j.1467-789X.2007.00393.x",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "note": "The indexes date it 2008, when it appeared online."
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "note": "The volume is given as 86; the issue is 8(6)."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "The prevalence of obesity is high worldwide [1], especially among disadvantaged socioeconomic groups in high-income countries [2, 3].",
+          "accept": [
+            "supported"
+          ],
+          "why": "Obesity prevalence has increased worldwide over about 50 years, reaching pandemic levels."
+        },
+        {
+          "ref": 2,
+          "sentence": "The prevalence of obesity is high worldwide [1], especially among disadvantaged socioeconomic groups in high-income countries [2, 3].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "In England, projected obesity prevalence is higher in manual than in non-manual social classes: one high-income country."
+        },
+        {
+          "ref": 3,
+          "sentence": "The prevalence of obesity is high worldwide [1], especially among disadvantaged socioeconomic groups in high-income countries [2, 3].",
+          "accept": [
+            "supported"
+          ],
+          "why": "In high-income countries, obesity is more prevalent among people from disadvantaged socioeconomic backgrounds."
+        },
+        {
+          "ref": 4,
+          "sentence": "Obesity is associated with a number of adverse health conditions that long-term weight loss can improve [4].",
+          "accept": [
+            "partially_supported",
+            "supported"
+          ],
+          "why": "Mentions obesity-related illness and finds long-term benefits of intentional weight loss on mortality for women and diabetics; results are mixed."
+        }
+      ]
+    },
+    {
+      "id": "oa05",
+      "topic": "Establishing vocabulary tests as a benchmark for evaluating large language models",
+      "source": {
+        "pmcid": "PMC11637312",
+        "title": "Establishing vocabulary tests as a benchmark for evaluating large language models",
+        "journal": "PLOS ONE",
+        "year": "2024",
+        "doi": "10.1371/journal.pone.0308259",
+        "licence": "CC BY"
+      },
+      "text": "Although the scores of the LSA model were not perfect (they were at the same level as speakers of English as a second language), they were much better than what was available at the time. Jarmasz and Szpakowicz reported that other algorithms for word meaning scored barely above the chance level (25%) on the TOEFL test [1]. In subsequent years, authors tried to improve the performance of LSA-type models by optimizing the algorithm and training materials. Performance on the TOEFL test (as it became known) gradually increased until Bullinaria and Levy reported 100% correct performance for a model tweaked to the test [2, 3]. Landauer and Dumais argued that their LSA model could be viewed as a simple three-layer neural network, an argument that was confirmed when real connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA [4, 5, 6].\n\nReferences\n[1] Jarmasz, M., and Szpakowicz, S. Roget’s thesaurus and semantic similarity, In Proceedings of the International Conference on Recent Advances in Natural Language Processing, pp. 212–219 (2003).\n[2] Bullinaria, J. A., & Levy, J. P. (2012). Extracting semantic representations from word co-occurrence statistics: stop-lists, stemming, and SVD. Behavior Research Methods, 44(3), 890–907. https://doi.org/10.3758/s13428-011-0183-8\n[3] Wiki, A. (n.d.). (2019, September 15). TOEFL Synonym Questions (State of the art).\n[4] Mikolov, T., Karafiát, M., Burget, L., Cernocký, J., & Khudanpur, S. (2010). Recurrent neural network based language model. In Proceeding of Interspeech, 2, 1045–1048.\n[5] Mikolov, T., Chen, K., Corrado, G., & Dean, J. (2013). Efficient estimation of word representations in vector space.\n[6] Mandera, P., Keuleers, E., & Brysbaert, M. (2017). Explaining human performance in psycholinguistic tasks with models of semantic similarity based on prediction and counting: A review and empirical validation. Journal of Memory and Language, 92, 57–78.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "note": "Cited as the 2003 conference paper; the indexes hold its 2004 book-chapter version."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "unindexed",
+          "note": "A wiki web page, not a paper."
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "note": "An arXiv preprint."
+        },
+        {
+          "n": 6,
+          "label": "real",
+          "note": "The indexes date it 2016, when it appeared online; no abstract in the indexes."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Jarmasz and Szpakowicz reported that other algorithms for word meaning scored barely above the chance level (25%) on the TOEFL test [1].",
+          "accept": [
+            "insufficient_evidence",
+            "partially_supported",
+            "not_supported"
+          ],
+          "why": "The abstract gives the authors' own 78.75% on TOEFL; it says nothing about other algorithms scoring near chance."
+        },
+        {
+          "ref": 2,
+          "sentence": "Performance on the TOEFL test (as it became known) gradually increased until Bullinaria and Levy reported 100% correct performance for a model tweaked to the test [2, 3].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "New state-of-the-art performance on a standard TOEFL task; 100% is not stated."
+        },
+        {
+          "ref": 3,
+          "sentence": "Performance on the TOEFL test (as it became known) gradually increased until Bullinaria and Levy reported 100% correct performance for a model tweaked to the test [2, 3].",
+          "accept": null,
+          "why": "A web page, not a paper."
+        },
+        {
+          "ref": 4,
+          "sentence": "Landauer and Dumais argued that their LSA model could be viewed as a simple three-layer neural network, an argument that was confirmed when real connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA [4, 5, 6].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "Recurrent network language models beat n-gram models, not LSA's co-occurrence statistics."
+        },
+        {
+          "ref": 5,
+          "sentence": "Landauer and Dumais argued that their LSA model could be viewed as a simple three-layer neural network, an argument that was confirmed when real connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA [4, 5, 6].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "New word-vector models beat earlier neural-network techniques; LSA is not mentioned."
+        },
+        {
+          "ref": 6,
+          "sentence": "Landauer and Dumais argued that their LSA model could be viewed as a simple three-layer neural network, an argument that was confirmed when real connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA [4, 5, 6].",
+          "accept": null,
+          "why": "No abstract in the indexes."
+        }
+      ]
+    }
+  ]
+}

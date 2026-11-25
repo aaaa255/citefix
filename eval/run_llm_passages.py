@@ -1,5 +1,6 @@
-"""Run the whole check (steps 1 to 3) on literature-review paragraphs that a language model wrote,
-and compare it with the hand-made labels in eval/data/llm_passages.json.
+"""Run the whole check (steps 1 to 3) on labelled passages and compare it with the labels: by default the
+literature-review paragraphs a language model wrote (eval/data/llm_passages.json); with --data, any file in
+the same format, such as eval/data/oa_passages.json (introductions of open-access papers).
 
 - Step 1: real references should be verified; fabricated ones should not.
 - Finding citations: every labelled citation should be found in its passage.
@@ -29,7 +30,9 @@ from citefix.review import review_passage  # noqa: E402
 from citefix.support import SUPPORTED  # noqa: E402
 from citefix.textutil import title_similarity  # noqa: E402
 
-EXPECTED = {"real": {VERIFIED}, "real_error": {SUSPICIOUS}, "fabricated": {SUSPICIOUS, NOT_FOUND}}
+# real_error: a detail of the reference is wrong; unindexed: a report or web page the indexes do not hold.
+EXPECTED = {"real": {VERIFIED}, "real_error": {SUSPICIOUS}, "fabricated": {SUSPICIOUS, NOT_FOUND},
+            "unindexed": {SUSPICIOUS, NOT_FOUND}}
 
 
 def rate(hits: int, total: int) -> str:
@@ -92,7 +95,11 @@ def main() -> int:
         used = set()
         for cite in passage["citations"]:
             options = [i for i, c in enumerate(claims) if c.ref_number == cite["ref"] and i not in used]
-            best = max(options, key=lambda i: title_similarity(claims[i].sentence, cite["sentence"]), default=None)
+            # Two citations of one reference in one sentence are told apart by their claims.
+            if cite.get("claim"):
+                best = max(options, key=lambda i: title_similarity(claims[i].claim, cite["claim"]), default=None)
+            else:
+                best = max(options, key=lambda i: title_similarity(claims[i].sentence, cite["sentence"]), default=None)
             if best is not None:
                 used.add(best)
             claim = claims[best] if best is not None else None
@@ -134,7 +141,11 @@ def main() -> int:
     print()
     print("passages that could not be checked:  ", sum(r["kind"] == "passage" for r in rows), "of", len(passages))
     for label, text in (("real", "real references verified:           "),
+                        ("real_error", "references with a wrong detail flagged:"),
+                        ("unindexed", "reports and pages not verified:     "),
                         ("fabricated", "fabricated references caught:       ")):
+        if not any(r["label"] == label for r in refs):
+            continue
         group_rows = [r for r in refs if r["label"] == label]
         print(text, rate(sum(r["right"] for r in group_rows), len(group_rows)))
     print("real references called not found:   ",
