@@ -17,7 +17,7 @@ from .existence import NOT_FOUND, SAME_PAPER, ExistenceResult, check_reference
 from .repair import RepairResult, find_support
 from .sources import Candidate
 from .support import SUPPORTED, SupportResult, judge_support
-from .textutil import parse_reference
+from .textutil import join_wrapped, parse_reference
 
 Emit = Callable[[str, dict], None]
 
@@ -65,15 +65,16 @@ def _starts_a_list(line: str) -> bool:
 
 
 def split_passage(text: str) -> tuple[str, list[str]]:
-    """Split at a "References" (or "参考文献") line: body above, one reference per line below.
+    """Split at a "References" (or "参考文献") line: body above, one reference per line below, with
+    references that a PDF or a word processor wrapped onto several lines joined back up.
     A heading at the end of the last sentence counts too, when a reference list follows it."""
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if _HEADING.match(line):
-            return "\n".join(lines[:i]).strip(), [r.strip() for r in lines[i + 1:] if r.strip()]
+            return "\n".join(lines[:i]).strip(), join_wrapped(lines[i + 1:])
     for i, line in enumerate(lines):
         trailing = _TRAILING_HEADING.match(line)
-        rest = [r.strip() for r in lines[i + 1:] if r.strip()]
+        rest = join_wrapped(lines[i + 1:])
         if trailing and rest and _starts_a_list(rest[0]):
             return "\n".join([*lines[:i], trailing.group(1)]).strip(), rest
     return text.strip(), []

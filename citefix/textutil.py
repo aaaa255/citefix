@@ -106,6 +106,62 @@ def parse_reference(raw: str) -> ParsedRef:
     )
 
 
+# A long reference pasted from a PDF or a word processor can wrap onto several lines.
+_ENDS_REFERENCE = re.compile(r"(?:[.。]|\d|https?://\S+|\b10\.\d{4,9}/\S+)$")
+_ENDS_MIDWAY = re.compile(r"(?:[&,:;–-]|\band)$")
+_STARTS_LINK = re.compile(r"(?:https?://|doi\b)", re.IGNORECASE)
+_LINK_CUT = re.compile(r"(?:https?://|\b10\.\d{4,9}/)\S*[./-]$")  # a link the line break cut in two
+_PARTICLES = r"(?:(?:van|von|de|da|di|du|del|della|den|der|le|la|ten|ter)\s+)"
+_NAME_PARTICLE = re.compile(rf"^{_PARTICLES}+[A-Z]")  # van der Maaten
+# A line that opens like an author list starts a reference even when a long list pushed its year onto
+# the next line: "Wadden, D., Lin, S., ...", "K. He, X. Zhang, ...", "He K, ...", "Ashish Vaswani, Noam ...".
+_FULL_NAME = r"[A-Z][a-z]+(?:\s+[A-Z]\.)*\s+[A-Z][\w'’-]+"
+_AUTHOR_START = re.compile(rf"^{_PARTICLES}*(?:[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)?,\s*[A-Z]\."
+                           r"|(?:[A-Z]\.\s*-?\s*)+[A-Z][\w'’-]+,|[A-Z][\w'’-]+\s+[A-Z]{1,3}\s*[,.]"
+                           rf"|{_FULL_NAME},\s+(?:and\s+)?{_FULL_NAME}[,.])")
+
+
+def _continues(above: str, line: str, numbered: bool) -> bool:
+    """Does this line carry on the reference above it rather than start a new one?"""
+    if _NUMBERING.match(line):
+        return False
+    if _STARTS_LINK.match(line) or _ENDS_MIDWAY.search(above):
+        return True
+    if line[0].islower() and not _NAME_PARTICLE.match(line):
+        return True
+    ref = parse_reference(line)
+    author = bool(ref.first_author or _NAME_PARTICLE.match(line))
+    looks_new = (author and (ref.year is not None or "n.d." in line)) or bool(_AUTHOR_START.match(line))
+    if looks_new and _ENDS_REFERENCE.search(above):
+        return False
+    return numbered or not looks_new or not _ENDS_REFERENCE.search(above)
+
+
+def join_wrapped(lines: list[str]) -> list[str]:
+    """One entry per reference from pasted lines. A blank line always ends a reference and a numbered
+    line always starts one. A line carries on the one above when that one stops midway (on "&" or a
+    comma), when it starts with a link or a lower-case word, or when it does not look like the start of
+    a reference (an author and a year). In a numbered list, a line without a number carries on unless it
+    looks like a new reference and the one above looks finished."""
+    entries: list[str] = []
+    numbered: bool | None = None
+    after_blank = True
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            after_blank = True
+            continue
+        if numbered is None:
+            numbered = bool(_NUMBERING.match(line))
+        if entries and not after_blank and _continues(entries[-1], line, numbered):
+            joiner = "" if entries[-1].endswith("-") or _LINK_CUT.search(entries[-1]) else " "
+            entries[-1] += joiner + line
+        else:
+            entries.append(line)
+        after_blank = False
+    return entries
+
+
 def title_similarity(a: str, b: str) -> float:
     """Similarity of two titles from 0 to 1, after normalisation."""
     na, nb = normalize(a), normalize(b)
