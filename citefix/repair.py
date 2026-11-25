@@ -164,17 +164,27 @@ def _arxiv_copies(cands: list[Candidate]) -> tuple[list[Candidate], list[str]]:
 
 def search(library: Library, query: str, years: sources.Years | None) -> tuple[list[dict], list[str]]:
     """OpenAlex first. Crossref (one request a second) only when OpenAlex gives fewer than ENOUGH papers
-    with an abstract, and arXiv only for the leading records that lack one."""
+    with an abstract, and arXiv only for the leading records that lack one; but a full arXiv search when
+    OpenAlex fails or the two together still come up short, since OpenAlex is where arXiv's papers are
+    otherwise found."""
     found: list[Candidate] = []
     errors: list[str] = []
+
+    def usable() -> int:
+        return sum(plausible_abstract(c.title, c.abstract) for c in found)
     for name, lookup in (("openalex", lambda: sources.openalex(query, years=years, per_page=6)),
                          ("crossref", lambda: sources.crossref(query, years=years, rows=6))):
-        if name == "crossref" and sum(plausible_abstract(c.title, c.abstract) for c in found) >= ENOUGH:
+        if name == "crossref" and usable() >= ENOUGH:
             break
         try:
             found += lookup()
         except Exception as err:
             errors.append(f"{name}: {err}")
+    if usable() < ENOUGH or any(e.startswith("openalex") for e in errors):
+        try:
+            found += sources.arxiv(query, max_results=6, field="all")
+        except Exception as err:
+            errors.append(f"arxiv: {err}")
     copies, arxiv_errors = _arxiv_copies(found)
     found += copies
     errors += arxiv_errors

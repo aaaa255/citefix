@@ -245,10 +245,22 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(results[0]["venue"], "Advances in Neural Information Processing Systems")
         self.assertEqual(results[0]["abstract"], DIFFUSION)
 
-    def test_arxiv_is_not_asked_when_every_record_has_an_abstract(self):
-        with mock.patch("citefix.sources.openalex", return_value=[preprint()]), \
-                mock.patch("citefix.sources.crossref", return_value=[]), \
+    def test_arxiv_is_not_asked_when_openalex_gives_enough(self):
+        records = [Candidate("openalex", f"Diffusion models {n}", 2021, [f"Author {n}"], abstract=DIFFUSION)
+                   for n in "ABC"]
+        with mock.patch("citefix.sources.openalex", return_value=records), \
+                mock.patch("citefix.sources.crossref") as crossref, \
                 mock.patch("citefix.sources.arxiv") as arxiv:
             results, _ = search(Library(), "denoising diffusion", None)
+        crossref.assert_not_called()
         arxiv.assert_not_called()
-        self.assertEqual(len(results), 1)
+        self.assertEqual(len(results), 3)
+
+    def test_arxiv_is_searched_in_full_when_openalex_fails(self):
+        with mock.patch("citefix.sources.openalex", side_effect=OSError("rate-limited")), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv", return_value=[preprint()]) as arxiv:
+            results, errors = search(Library(), "denoising diffusion", None)
+        self.assertEqual(arxiv.call_args.kwargs.get("field"), "all")
+        self.assertEqual([r["title"] for r in results], ["Denoising Diffusion Probabilistic Models"])
+        self.assertTrue(errors[0].startswith("openalex"))
