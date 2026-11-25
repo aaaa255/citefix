@@ -63,12 +63,19 @@ def main() -> int:
         print(f"       {len(searches)} searches: {' | '.join(searches)}")
         for objection in rejected:
             print(f"       rejected: {objection}")
+        version = result.paper.venue_type if result.paper else None
+        if result.paper:
+            print(f"       version: {version or 'unknown'}, {result.paper.venue or 'no venue'}, doi {result.paper.doi}")
         rows.append({"id": item["id"], "decision": result.decision, "suggested": suggested,
+                     "suggested_venue": result.paper.venue if result.paper else None, "suggested_version": version,
                      "expected": expected, "right": right, "check": result.check,
                      "revised_claim": result.revised_claim, "keeps_citation": result.keeps_citation,
                      "searches": searches, "rejected": rejected})
 
     print(f"\nsucceeded: {sum(r['right'] for r in rows)}/{len(rows)}")
+    papers = [r for r in rows if r["suggested"]]
+    print(f"suggested papers that are preprints: {sum(r['suggested_version'] == 'repository' for r in papers)}"
+          f"/{len(papers)}")
     print(f"searches per claim: {sum(len(r['searches']) for r in rows) / len(rows):.1f}")
     print(llm.usage_summary(before))
     print(f"time: {time.monotonic() - started:.0f} s")
