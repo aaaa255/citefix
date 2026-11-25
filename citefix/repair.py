@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from . import llm, sources
 from .sources import Candidate
 from .support import PARTIAL, SUPPORTED, judge_support, quote_in
-from .textutil import normalize
+from .textutil import normalize, plausible_abstract
 
 REPLACE = "replace"
 REVISE = "revise_claim"
@@ -135,8 +135,8 @@ def search(library: Library, query: str, years: sources.Years | None) -> tuple[l
                 errors.append(error)
     results: list[dict] = []
     for cand in found:
-        if not cand.abstract:
-            continue  # the agent cannot judge a paper without its abstract
+        if not plausible_abstract(cand.title, cand.abstract):
+            continue  # no abstract, or one that is really a README or acknowledgments: nothing to judge
         if years and cand.year and not years[0] <= cand.year <= years[1]:
             continue
         pid = library.add(cand)

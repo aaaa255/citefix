@@ -162,6 +162,31 @@ def join_wrapped(lines: list[str]) -> list[str]:
     return entries
 
 
+# Indexes sometimes store something other than an abstract in the abstract field: a software README,
+# a paper's acknowledgments, or a line of publication details. Two signs of a README or of
+# acknowledgments are needed, since one alone can turn up in a real abstract.
+_README_SIGNS = re.compile(r"\b(?:in this repository|docker|install(?:ation)?|git clone|pip install|readme|usage)\b",
+                           re.IGNORECASE)
+_THANKS_SIGNS = re.compile(r"\b(?:referees?|we thank|grateful|for help|helpful comments|supported by|funded by)\b",
+                           re.IGNORECASE)
+_PUBLICATION_DETAILS = re.compile(r"\bpublished in volume \d+", re.IGNORECASE)
+
+
+def plausible_abstract(title: str, abstract: str | None) -> bool:
+    """False when the text an index holds as a paper's abstract is clearly something else: too short,
+    a README, acknowledgments, publication details, or text sharing no word with the title."""
+    if not abstract or len(abstract.split()) < 20 or _PUBLICATION_DETAILS.search(abstract):
+        return False
+    if len(set(m.lower() for m in _README_SIGNS.findall(abstract))) >= 2:
+        return False
+    if len(set(m.lower() for m in _THANKS_SIGNS.findall(abstract))) >= 2:
+        return False
+    def stems(text: str) -> set[str]:
+        return {w.removesuffix("s") for w in normalize(text).split() if len(w) > 3 and w.isascii()}
+    words = stems(title)
+    return not words or bool(words & stems(abstract))
+
+
 def title_similarity(a: str, b: str) -> float:
     """Similarity of two titles from 0 to 1, after normalisation."""
     na, nb = normalize(a), normalize(b)

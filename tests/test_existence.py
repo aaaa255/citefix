@@ -53,8 +53,10 @@ class PubMedAbstractTest(unittest.TestCase):
     def test_used_when_no_index_has_the_abstract(self):
         record = Candidate("openalex", SEIMON_TITLE, 2015, ["Radhika V. Seimon"], doi="10.1016/j.mce.2015.09.014")
         match = score(SEIMON, record)
-        with mock.patch("citefix.sources.pubmed_abstract", return_value=(SEIMON_TITLE, "From PubMed.")) as lookup:
-            self.assertEqual(_pick_abstract(match, [match], []), ("From PubMed.", "pubmed"))
+        abstract = ("We reviewed trials of intermittent diets and found that they reduce body weight about as much as "
+                    "continuous diets, without clear physiological benefits for weight loss beyond that.")
+        with mock.patch("citefix.sources.pubmed_abstract", return_value=(SEIMON_TITLE, abstract)) as lookup:
+            self.assertEqual(_pick_abstract(match, [match], []), (abstract, "pubmed"))
         lookup.assert_called_once_with("10.1016/j.mce.2015.09.014")
 
     def test_a_pubmed_record_with_another_title_is_ignored(self):

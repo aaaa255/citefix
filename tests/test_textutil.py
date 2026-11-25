@@ -1,6 +1,7 @@
 import unittest
 
-from citefix.textutil import extract_doi, join_wrapped, parse_reference, partial_similarity, title_similarity
+from citefix.textutil import (extract_doi, join_wrapped, parse_reference, partial_similarity, plausible_abstract,
+                              title_similarity)
 
 
 class ParseReferenceTest(unittest.TestCase):
@@ -156,3 +157,44 @@ class JoinWrappedTest(unittest.TestCase):
             for refs in lists:
                 lines = [w for r in refs for w in textwrap.wrap(r, width, break_long_words=False, break_on_hyphens=False)]
                 self.assertEqual(join_wrapped(lines), refs, f"width {width}")
+
+
+class PlausibleAbstractTest(unittest.TestCase):
+    """Indexes sometimes hold something else in a paper's abstract field."""
+
+    ATTENTION = ("We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, "
+                 "dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks "
+                 "show these models to be superior in quality.")
+
+    def test_a_real_abstract(self):
+        self.assertTrue(plausible_abstract("Attention Is All You Need", self.ATTENTION))
+
+    def test_a_real_abstract_that_links_to_its_code(self):
+        text = self.ATTENTION + " Code and trained models are released at https://github.com/example/transformer."
+        self.assertTrue(plausible_abstract("Attention Is All You Need", text))
+
+    def test_a_software_readme(self):
+        text = ("DiffuCpG. In this repository we deposit the code used to build the diffusion models with example "
+                "datasets for methylation imputation. Docker usage: install Docker from the link below; a machine "
+                "with 16 GB of memory is recommended.")
+        self.assertFalse(plausible_abstract("Denoising Diffusion Probabilistic Models", text))
+
+    def test_acknowledgments(self):
+        text = ("We thank two referees for help at various stages of this work, which was originally supported by a "
+                "study commission and has been revised substantially for this survey of the evidence.")
+        self.assertFalse(plausible_abstract("The Effect of the Minimum Wage on Employment and Unemployment", text))
+
+    def test_publication_details(self):
+        text = ("Minimum Wages and Employment: A Case Study of the Fast-Food Industry in New Jersey and Pennsylvania: "
+                "Reply by David Card and Alan B. Krueger. Published in volume 90, issue 5, pages 1397-1420 of "
+                "American Economic Review, December 2000")
+        self.assertFalse(plausible_abstract("Minimum Wages and Employment: Reply", text))
+
+    def test_text_about_something_else(self):
+        self.assertFalse(plausible_abstract("Deep Residual Learning for Image Recognition", self.ATTENTION))
+
+    def test_too_short(self):
+        self.assertFalse(plausible_abstract("Attention Is All You Need", "Attention matters a great deal."))
+
+    def test_a_title_in_chinese_skips_the_shared_word_check(self):
+        self.assertTrue(plausible_abstract("机器学习", self.ATTENTION))
