@@ -12,6 +12,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections import OrderedDict
 from dataclasses import dataclass, field
 
 from .textutil import normalize
@@ -106,8 +107,46 @@ _GATES = {
 }
 
 
+# The same lookups come back again and again: visitors check the example passage, and the agent searches
+# for the same papers. Replies are kept in memory for CITEFIX_CACHE_HOURS (default 6; 0 turns this off),
+# at most _CACHE_SIZE of them, dropping the least recently used.
+_CACHE_HOURS = float(os.environ.get("CITEFIX_CACHE_HOURS") or 6)
+_CACHE_SIZE = 500
+_cache: OrderedDict[str, tuple[float, bytes | None]] = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def _cached(url: str) -> tuple[bool, bytes | None]:
+    """(True, reply) when a fresh reply to this URL is in memory, else (False, None)."""
+    if _CACHE_HOURS <= 0:
+        return False, None
+    with _cache_lock:
+        entry = _cache.get(url)
+        if entry is None:
+            return False, None
+        if time.monotonic() - entry[0] > _CACHE_HOURS * 3600:
+            del _cache[url]
+            return False, None
+        _cache.move_to_end(url)
+        return True, entry[1]
+
+
+def _remember(url: str, body: bytes | None) -> None:
+    if _CACHE_HOURS <= 0:
+        return
+    with _cache_lock:
+        _cache[url] = (time.monotonic(), body)
+        _cache.move_to_end(url)
+        while len(_cache) > _CACHE_SIZE:
+            _cache.popitem(last=False)
+
+
 def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes | None:
-    """GET with one retry. Returns None on 404, which these APIs use for "no such record"."""
+    """GET with one retry. Returns None on 404, which these APIs use for "no such record".
+    Replies, a 404 included, are cached; errors are not."""
+    hit, body = _cached(url)
+    if hit:
+        return body
     gate = _GATES[source]
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
     for attempt in (1, 2):
@@ -119,6 +158,7 @@ def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes 
         except urllib.error.HTTPError as err:
             if err.code == 404:
                 gate.note_success()
+                _remember(url, None)
                 return None
             if err.code == 429:
                 retry_after = _seconds(err.headers.get("Retry-After"))
@@ -138,6 +178,7 @@ def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes 
                 continue
             raise SourceError(str(reason)) from err
         gate.note_success()
+        _remember(url, body)
         return body
     raise SourceError("no response")
 

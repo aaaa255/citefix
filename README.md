@@ -37,6 +37,8 @@ Put keys in `.env` (copy `.env.example`):
 | `S2_API_KEY` | Optional; Semantic Scholar is skipped without it. |
 | `CROSSREF_MAILTO` | Optional contact address for Crossref's polite pool. |
 
+Lookups are kept in memory for six hours (`CITEFIX_CACHE_HOURS`; 0 turns this off), so checking the same references again skips the indexes: step 1 on the four example references took 7.7 s the first time and 0.02 s the second.
+
 For a public deployment (see `render.yaml` and `Dockerfile`), `CITEFIX_PER_IP_PER_HOUR` (40 in the Dockerfile, since a class on one campus network shares an address) and `CITEFIX_DAILY_LIMIT` (200) cap how many checks visitors can run. At most two checks run at once; a third waits in line and starts when one finishes.
 
 ## Tester feedback
