@@ -244,3 +244,11 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["venue"], "Advances in Neural Information Processing Systems")
         self.assertEqual(results[0]["abstract"], DIFFUSION)
+
+    def test_arxiv_is_not_asked_when_every_record_has_an_abstract(self):
+        with mock.patch("citefix.sources.openalex", return_value=[preprint()]), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv") as arxiv:
+            results, _ = search(Library(), "denoising diffusion", None)
+        arxiv.assert_not_called()
+        self.assertEqual(len(results), 1)

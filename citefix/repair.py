@@ -15,13 +15,12 @@ from __future__ import annotations
 import dataclasses
 import json
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from . import llm, sources
 from .sources import Candidate
 from .support import PARTIAL, SUPPORTED, judge_support, quote_in
-from .textutil import normalize, plausible_abstract
+from .textutil import normalize, plausible_abstract, title_similarity
 
 REPLACE = "replace"
 REVISE = "revise_claim"
@@ -136,26 +135,49 @@ def _merge(kept: Candidate, new: Candidate) -> Candidate:
     return dataclasses.replace(details, abstract=abstract)
 
 
+ARXIV_FILL = 2  # at most this many records are looked up on arXiv per search
+ENOUGH = 3  # OpenAlex results with an abstract that make asking Crossref as well unnecessary
+
+
+def _maybe_on_arxiv(cand: Candidate) -> bool:
+    """A preprint, or conference proceedings, whose papers are often on arXiv too."""
+    return (cand.venue_type in ("repository", "conference") or "arxiv" in (cand.venue or "").lower()
+            or (cand.doi or "").lower().startswith("10.48550/"))
+
+
+def _arxiv_copies(cands: list[Candidate]) -> tuple[list[Candidate], list[str]]:
+    """arXiv's copies of the leading preprint or proceedings records that came without a usable abstract.
+    OpenAlex covers arXiv, so a full arXiv search is not needed, but arXiv's own copy has the real abstract
+    where OpenAlex holds none or the wrong text. arXiv asks for 3 s between calls, which made a full search
+    there the slowest part of every search. Journal papers without an abstract are seldom on arXiv, so they
+    are not looked up."""
+    missing = [c for c in cands if _maybe_on_arxiv(c) and not plausible_abstract(c.title, c.abstract)][:ARXIV_FILL]
+    copies: list[Candidate] = []
+    for cand in missing:
+        try:
+            copies += [a for a in sources.arxiv(cand.title, max_results=2)
+                       if title_similarity(a.title, cand.title) >= 0.9]
+        except Exception as err:
+            return copies, [f"arxiv: {err}"]
+    return copies, []
+
+
 def search(library: Library, query: str, years: sources.Years | None) -> tuple[list[dict], list[str]]:
-    lookups = {
-        "openalex": lambda: sources.openalex(query, years=years, per_page=6),
-        "arxiv": lambda: sources.arxiv(query, max_results=6, field="all"),
-        "crossref": lambda: sources.crossref(query, years=years, rows=6),  # has abstracts for some papers
-    }
+    """OpenAlex first. Crossref (one request a second) only when OpenAlex gives fewer than ENOUGH papers
+    with an abstract, and arXiv only for the leading records that lack one."""
     found: list[Candidate] = []
     errors: list[str] = []
-
-    def run(name):
+    for name, lookup in (("openalex", lambda: sources.openalex(query, years=years, per_page=6)),
+                         ("crossref", lambda: sources.crossref(query, years=years, rows=6))):
+        if name == "crossref" and sum(plausible_abstract(c.title, c.abstract) for c in found) >= ENOUGH:
+            break
         try:
-            return lookups[name](), None
+            found += lookup()
         except Exception as err:
-            return [], f"{name}: {err}"
-
-    with ThreadPoolExecutor(max_workers=len(lookups)) as pool:
-        for cands, error in pool.map(run, lookups):
-            found += cands
-            if error:
-                errors.append(error)
+            errors.append(f"{name}: {err}")
+    copies, arxiv_errors = _arxiv_copies(found)
+    found += copies
+    errors += arxiv_errors
     results: list[dict] = []
     for cand in found:
         if years and cand.year and not years[0] <= cand.year <= years[1]:
