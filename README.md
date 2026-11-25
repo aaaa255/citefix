@@ -68,6 +68,8 @@ These are small hand-written test sets built on well-known papers, so the number
 
 The passages and labels are in `eval/data/llm_passages.json`; `python eval/run_llm_passages.py` runs them.
 
+**Repeated judging.** A model's verdicts vary from run to run, so each of 43 labelled citations (the 29 citations of real papers above and the 14 hand-written pairs) was judged three times by the current judge, `deepseek-flash`, and three times by `deepseek-v4-pro` (`python eval/run_judge_repeats.py`; run by Claude, an AI). flash flagged 1 of 30 judgments it should have passed and let through none of 69 it should have flagged; v4-pro flagged none and let one through. They differ on borderline citations, which flash flagged 26 times in 30 and v4-pro 18 times. flash gave the same verdict in all three runs for 38 of the 43 citations and v4-pro for 35, and v4-pro took twice as long, so the default stays. Keeping the majority of three verdicts removed every error for both models on these 43 citations, at three times the judging calls; that trade is not settled.
+
 What testing changed:
 
 - GAN (2014) was first marked suspicious because a better-cited 2020 paper with almost the same title ranked first. The checker now searches again within the cited year.
