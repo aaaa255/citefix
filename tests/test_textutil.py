@@ -190,6 +190,16 @@ class PlausibleAbstractTest(unittest.TestCase):
                 "American Economic Review, December 2000")
         self.assertFalse(plausible_abstract("Minimum Wages and Employment: Reply", text))
 
+    def test_an_abstract_about_installing_things(self):
+        text = ("We studied the installation and usage of rooftop solar panels in 300 households and found that "
+                "installation costs, not usage habits, explained most of the variation in adoption.")
+        self.assertTrue(plausible_abstract("Rooftop solar adoption in households", text))
+
+    def test_an_abstract_with_a_funding_note(self):
+        text = ("Our results are supported by a randomized trial of 139 patients with obesity, in which weight loss "
+                "did not differ between groups after 12 months. (Funded by the National Key Research Project.)")
+        self.assertTrue(plausible_abstract("Time-restricted eating for weight loss", text))
+
     def test_text_about_something_else(self):
         self.assertFalse(plausible_abstract("Deep Residual Learning for Image Recognition", self.ATTENTION))
 

@@ -164,11 +164,12 @@ def join_wrapped(lines: list[str]) -> list[str]:
 
 # Indexes sometimes store something other than an abstract in the abstract field: a software README,
 # a paper's acknowledgments, or a line of publication details. Two signs of a README or of
-# acknowledgments are needed, since one alone can turn up in a real abstract.
-_README_SIGNS = re.compile(r"\b(?:in this repository|docker|install(?:ation)?|git clone|pip install|readme|usage)\b",
+# acknowledgments are needed, since one alone can turn up in a real abstract. Only phrases a real abstract
+# hardly uses count: "installation", "usage" or "funded by" do turn up in real ones.
+_README_SIGNS = re.compile(r"\b(?:in this repository|docker|git clone|pip install|npm install|readme|requirements\.txt)\b",
                            re.IGNORECASE)
-_THANKS_SIGNS = re.compile(r"\b(?:referees?|we thank|grateful|for help|helpful comments|supported by|funded by)\b",
-                           re.IGNORECASE)
+_THANKS_SIGNS = re.compile(r"\b(?:referees?|we thank|we are grateful|grateful to|for help|helpful comments|"
+                           r"originally supported by)\b", re.IGNORECASE)
 _PUBLICATION_DETAILS = re.compile(r"\bpublished in volume \d+", re.IGNORECASE)
 
 
