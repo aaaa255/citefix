@@ -124,6 +124,18 @@ class JoinWrappedTest(unittest.TestCase):
                  "Ioffe, S. Batch normalization (n.d.)."]
         self.assertEqual(join_wrapped(lines), [line for line in lines if line])
 
+    def test_a_group_author_starts_a_reference(self):
+        lines = ["Smith, J. (2019). A study of children's asthma. Journal of Asthma, 1, 1–2.",
+                 "World Health Organization. (2020). Global report on asthma. WHO.",
+                 "Organisation for Economic Co-operation and Development. (2018). Education at a glance. OECD."]
+        self.assertEqual(join_wrapped(lines), lines)
+
+    def test_a_line_that_opens_with_the_year_carries_on(self):
+        refs = join_wrapped(["Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N.,",
+                             "Kaiser, Ł., Polosukhin, I.",
+                             "(2017). Attention is all you need. Advances in Neural Information Processing Systems, 30."])
+        self.assertEqual(len(refs), 1)
+
     def test_chinese_reference_wrapped(self):
         refs = join_wrapped(["[1] 周志华. 机器学习[M]. 北京:",
                              "清华大学出版社, 2016."])
@@ -136,7 +148,7 @@ class JoinWrappedTest(unittest.TestCase):
         self.assertEqual(len(refs), 2)
 
     def test_full_names_first(self):
-        refs = join_wrapped(["[13] K. He and J. Sun, “Deep residual learning,” in Proc. CVPR, 2016, pp. 770–778.",
+        refs = join_wrapped(["He, K., & Sun, J. (2016). Deep residual learning. In Proc. CVPR (pp. 770–778).",
                              "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,",
                              "Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need."])
         self.assertEqual(len(refs), 2)
@@ -149,8 +161,8 @@ class JoinWrappedTest(unittest.TestCase):
 
         from citefix.review import split_passage
         data = Path(__file__).resolve().parents[1] / "eval" / "data"
-        lists = [split_passage(p["text"])[1] for p in
-                 json.loads((data / "llm_passages.json").read_text(encoding="utf-8"))["passages"]]
+        lists = [split_passage(p["text"])[1] for name in ("llm_passages.json", "oa_passages.json")
+                 for p in json.loads((data / name).read_text(encoding="utf-8"))["passages"]]
         lists.append([json.loads(line)["reference"] for line in
                       (data / "existence_sample.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()])
         for width in (40, 75, 110):
@@ -208,3 +220,10 @@ class PlausibleAbstractTest(unittest.TestCase):
 
     def test_a_title_in_chinese_skips_the_shared_word_check(self):
         self.assertTrue(plausible_abstract("机器学习", self.ATTENTION))
+
+    def test_an_ieee_author_list_broken_after_an_initial(self):
+        refs = join_wrapped(["[1] D. K. Duvenaud, D. Maclaurin, J.",
+                             "Iparraguirre, R. Gomez-Bombarelli, and R. P. Adams, \"Convolutional networks on graphs,\"",
+                             "in Advances in Neural Information Processing Systems 28, 2015, pp. 2224-2232.",
+                             "[2] S. Kearnes and P. Riley, \"Molecular graph convolutions,\" J. Comput.-Aided Mol. Des., 2016."])
+        self.assertEqual(len(refs), 2)

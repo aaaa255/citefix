@@ -119,30 +119,37 @@ _FULL_NAME = r"[A-Z][a-z]+(?:\s+[A-Z]\.)*\s+[A-Z][\w'’-]+"
 _AUTHOR_START = re.compile(rf"^{_PARTICLES}*(?:[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)?,\s*[A-Z]\."
                            r"|(?:[A-Z]\.\s*-?\s*)+[A-Z][\w'’-]+,|[A-Z][\w'’-]+\s+[A-Z]{1,3}\s*[,.]"
                            rf"|{_FULL_NAME},\s+(?:and\s+)?{_FULL_NAME}[,.])")
+# A group author ("World Health Organization. (2020). ...") has no initials, but APA puts its year in
+# brackets right after its name, which opens with a whole word. "D. (2006). ..." is the rest of a person's
+# name that a line break cut off.
+_GROUP_AUTHOR = re.compile(r"^[A-Z][a-z]+(?:[\s,&]+[A-Za-z][\w'’-]*){0,14}\.\s*\((?:19|20)\d{2}[a-z]?(?:,[^)]*)?\)\.")
 
 
 def _continues(above: str, line: str, numbered: bool) -> bool:
     """Does this line carry on the reference above it rather than start a new one?"""
     if _NUMBERING.match(line):
         return False
+    if numbered:
+        return True  # in a numbered list every reference has its number; an IEEE author list can break anywhere
     if _STARTS_LINK.match(line) or _ENDS_MIDWAY.search(above):
         return True
     if line[0].islower() and not _NAME_PARTICLE.match(line):
         return True
     ref = parse_reference(line)
     author = bool(ref.first_author or _NAME_PARTICLE.match(line))
-    looks_new = (author and (ref.year is not None or "n.d." in line)) or bool(_AUTHOR_START.match(line))
+    looks_new = ((author and (ref.year is not None or "n.d." in line)) or bool(_AUTHOR_START.match(line))
+                 or bool(_GROUP_AUTHOR.match(line)))
     if looks_new and _ENDS_REFERENCE.search(above):
         return False
-    return numbered or not looks_new or not _ENDS_REFERENCE.search(above)
+    return not looks_new or not _ENDS_REFERENCE.search(above)
 
 
 def join_wrapped(lines: list[str]) -> list[str]:
     """One entry per reference from pasted lines. A blank line always ends a reference and a numbered
-    line always starts one. A line carries on the one above when that one stops midway (on "&" or a
-    comma), when it starts with a link or a lower-case word, or when it does not look like the start of
-    a reference (an author and a year). In a numbered list, a line without a number carries on unless it
-    looks like a new reference and the one above looks finished."""
+    line always starts one. When the list's first reference is numbered, a line without a number carries
+    on the one above. Otherwise a line carries on the one above when that one stops midway (on "&" or a
+    comma), when it starts with a link or a lower-case word, or when it does not look like the start of a
+    reference (an author and a year, an author list, or a group author followed by its year)."""
     entries: list[str] = []
     numbered: bool | None = None
     after_blank = True
