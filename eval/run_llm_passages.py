@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -23,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from citefix import sources  # noqa: E402
 from citefix import llm  # noqa: E402
 from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED  # noqa: E402
 from citefix.repair import REPLACE, REVISE  # noqa: E402
@@ -64,6 +66,8 @@ def group(accept: list[str]) -> str:
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if os.environ.get("CITEFIX_EVAL_CACHE") != "0":  # look each reference up once a week, not once a run
+        sources.use_disk_cache(ROOT / "eval" / ".cache" / "lookups.jsonl")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", default=str(ROOT / "eval" / "data" / "llm_passages.json"))
     parser.add_argument("--no-repair", action="store_true", help="skip step 3")

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -27,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from citefix import sources  # noqa: E402
 from citefix import llm  # noqa: E402
 from citefix.existence import check_many  # noqa: E402
 from citefix.review import split_passage  # noqa: E402
@@ -98,6 +100,8 @@ def summarize(model: str, rows: list[dict]) -> None:
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if os.environ.get("CITEFIX_EVAL_CACHE") != "0":  # look each reference up once a week, not once a run
+        sources.use_disk_cache(ROOT / "eval" / ".cache" / "lookups.jsonl")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--models", nargs="+", default=["deepseek-flash", "deepseek-v4-pro"])
     parser.add_argument("--runs", type=int, default=3)

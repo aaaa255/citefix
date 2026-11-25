@@ -93,7 +93,7 @@ What testing changed:
 - Timing the agent showed every search waiting on arXiv, which asks for 3 s between calls: on the step 3 set its 11 calls added up to 48.5 s. A search now asks OpenAlex first (it covers arXiv), Crossref only when OpenAlex returns fewer than three papers with an abstract, and arXiv only for up to two leading preprint or proceedings records that lack one. The agents' part of the step 3 set went from 36 s to 22 s with 2 arXiv calls instead of 11, still 7 of 7 right in two runs; a full check of the example passage went from 14–19 s to 12–14 s with the same verdicts.
 - Known gap: Chinese-language works are poorly covered by these indexes.
 
-Test sets and each round's results are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md).
+Test sets and each round's results are in `eval/`; the round-by-round notes are in [README.zh-CN.md](README.zh-CN.md). The evaluation scripts keep the indexes' replies in `eval/.cache/` for a week, so a rerun does not spend the OpenAlex budget again (repeated runs on 2026-11-25 used up a day's budget); set `CITEFIX_EVAL_CACHE=0` for a fresh run, for example to time one.
 
 ## Credits
 

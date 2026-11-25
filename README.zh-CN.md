@@ -75,6 +75,8 @@ python eval\run_judge_repeats.py
 python -m unittest discover -s tests
 ```
 
+评测脚本会把文献库的查询结果存在 `eval/.cache/`，一周内同一篇文献只查一次，不会每跑一次就重新花一遍 OpenAlex 的额度（11 月 25 日反复跑评测，把当天的额度用完了）。要完全重新查（比如测速度），设 `CITEFIX_EVAL_CACHE=0`。
+
 ## 密钥和设置
 
 把 `.env.example` 复制成 `.env` 再填。`.env` 只留在你的电脑上，已经写进 `.gitignore`。
