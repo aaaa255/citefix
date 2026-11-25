@@ -58,7 +58,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "The abstract says declarative memory is relational and flexible and implicit memory is not; analogical transfer is not mentioned."
+          "why": "The abstract says declarative memory is relational and flexible and implicit memory is not; analogical transfer is not mentioned.",
+          "claim": "Awareness of encoding and retrieval processes is required for the flexible application of knowledge in successful analogical transfer."
         },
         {
           "ref": 2,
@@ -67,7 +68,8 @@
             "supported",
             "partially_supported"
           ],
-          "why": "Amnesic patients learned a task normally but could not use the knowledge flexibly in transfer tests: declarative memory supports flexible transfer. Analogy is not mentioned."
+          "why": "Amnesic patients learned a task normally but could not use the knowledge flexibly in transfer tests: declarative memory supports flexible transfer. Analogy is not mentioned.",
+          "claim": "Awareness of encoding and retrieval processes is required for the flexible application of knowledge in successful analogical transfer."
         },
         {
           "ref": 3,
@@ -88,7 +90,8 @@
             "supported",
             "partially_supported"
           ],
-          "why": "Subjects received hints designed to ease the processes of analogical transfer; the abstract does not say the hints prompted recall of the earlier problem."
+          "why": "Subjects received hints designed to ease the processes of analogical transfer; the abstract does not say the hints prompted recall of the earlier problem.",
+          "claim": "Studies have used explicit cues that prompt participants to remember analogous earlier problems as a way of increasing transfer."
         },
         {
           "ref": 6,
@@ -98,7 +101,8 @@
             "insufficient_evidence",
             "not_supported"
           ],
-          "why": "The study asks what makes stories come to mind and seem sound; it does not use cues to increase transfer."
+          "why": "The study asks what makes stories come to mind and seem sound; it does not use cues to increase transfer.",
+          "claim": "Studies have used explicit cues that prompt participants to remember analogous earlier problems as a way of increasing transfer."
         },
         {
           "ref": 7,
@@ -162,7 +166,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "A study of 29 Great Lakes tributaries: one example of the Great Lakes work the sentence describes, though no abstract can say the field primarily focused there."
+          "why": "A study of 29 Great Lakes tributaries: one example of the Great Lakes work the sentence describes, though no abstract can say the field primarily focused there.",
+          "claim": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region."
         },
         {
           "ref": 2,
@@ -172,7 +177,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "A survey of the Laurentian Great Lakes' surface waters: an example, as above."
+          "why": "A survey of the Laurentian Great Lakes' surface waters: an example, as above.",
+          "claim": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region."
         },
         {
           "ref": 3,
@@ -182,7 +188,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "A study of Lake Ontario: an example, as above."
+          "why": "A study of Lake Ontario: an example, as above.",
+          "claim": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region."
         },
         {
           "ref": 4,
@@ -192,7 +199,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "A study of Lake Ontario sediments: an example, as above."
+          "why": "A study of Lake Ontario sediments: an example, as above.",
+          "claim": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region."
         },
         {
           "ref": 5,
@@ -201,7 +209,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "A study of an urban river; the abstract does not say where, so it cannot show the Great Lakes."
+          "why": "A study of an urban river; the abstract does not say where, so it cannot show the Great Lakes.",
+          "claim": "North American freshwater studies of microplastics have primarily focused on the Great Lakes region."
         }
       ]
     },
@@ -267,7 +276,8 @@
           "accept": [
             "supported"
           ],
-          "why": "A meta-analysis of 16 UK studies finds no overall practically significant adverse employment effect."
+          "why": "A meta-analysis of 16 UK studies finds no overall practically significant adverse employment effect.",
+          "claim": "Most studies suggest that the overall employment effects of the UK minimum wage are minimal."
         },
         {
           "ref": 3,
@@ -301,7 +311,8 @@
             "not_supported",
             "insufficient_evidence"
           ],
-          "why": "The abstract is about young workers at the age thresholds, not service industry employees."
+          "why": "The abstract is about young workers at the age thresholds, not service industry employees.",
+          "claim": "Service industry employees lose employment opportunities when the minimum wage increases."
         },
         {
           "ref": 6,
@@ -310,7 +321,8 @@
             "supported",
             "partially_supported"
           ],
-          "why": "In care homes the minimum wage had sizeable wage effects and some evidence of employment reductions."
+          "why": "In care homes the minimum wage had sizeable wage effects and some evidence of employment reductions.",
+          "claim": "Care home workers lose employment opportunities when the minimum wage increases."
         },
         {
           "ref": 7,
@@ -319,7 +331,8 @@
             "supported",
             "partially_supported"
           ],
-          "why": "The minimum wage lowers the chance of staying in the same job, and many workers change firms; costs are not mentioned."
+          "why": "The minimum wage lowers the chance of staying in the same job, and many workers change firms; costs are not mentioned.",
+          "claim": "Low-paid workers switch jobs a great deal after minimum wage increases, which has associated costs."
         }
       ]
     },
@@ -364,7 +377,8 @@
           "accept": [
             "supported"
           ],
-          "why": "Obesity prevalence has increased worldwide over about 50 years, reaching pandemic levels."
+          "why": "Obesity prevalence has increased worldwide over about 50 years, reaching pandemic levels.",
+          "claim": "The prevalence of obesity is high worldwide."
         },
         {
           "ref": 2,
@@ -373,7 +387,8 @@
             "supported",
             "partially_supported"
           ],
-          "why": "In England, projected obesity prevalence is higher in manual than in non-manual social classes: one high-income country."
+          "why": "In England, projected obesity prevalence is higher in manual than in non-manual social classes: one high-income country.",
+          "claim": "Obesity is especially prevalent among disadvantaged socioeconomic groups in high-income countries."
         },
         {
           "ref": 3,
@@ -381,7 +396,8 @@
           "accept": [
             "supported"
           ],
-          "why": "In high-income countries, obesity is more prevalent among people from disadvantaged socioeconomic backgrounds."
+          "why": "In high-income countries, obesity is more prevalent among people from disadvantaged socioeconomic backgrounds.",
+          "claim": "Obesity is especially prevalent among disadvantaged socioeconomic groups in high-income countries."
         },
         {
           "ref": 4,
@@ -390,7 +406,8 @@
             "partially_supported",
             "supported"
           ],
-          "why": "Mentions obesity-related illness and finds long-term benefits of intentional weight loss on mortality for women and diabetics; results are mixed."
+          "why": "Mentions obesity-related illness and finds long-term benefits of intentional weight loss on mortality for women and diabetics; results are mixed.",
+          "claim": "Obesity is associated with a number of adverse health conditions that long-term weight loss can improve."
         }
       ]
     },
@@ -447,7 +464,8 @@
             "partially_supported",
             "not_supported"
           ],
-          "why": "The abstract gives the authors' own 78.75% on TOEFL; it says nothing about other algorithms scoring near chance."
+          "why": "The abstract gives the authors' own 78.75% on TOEFL; it says nothing about other algorithms scoring near chance.",
+          "claim": "Other algorithms for word meaning scored barely above the chance level (25%) on the TOEFL test."
         },
         {
           "ref": 2,
@@ -456,7 +474,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "New state-of-the-art performance on a standard TOEFL task; 100% is not stated."
+          "why": "New state-of-the-art performance on a standard TOEFL task; 100% is not stated.",
+          "claim": "Bullinaria and Levy reported 100% correct performance on the TOEFL test for a model tweaked to the test."
         },
         {
           "ref": 3,
@@ -471,7 +490,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "Recurrent network language models beat n-gram models, not LSA's co-occurrence statistics."
+          "why": "Recurrent network language models beat n-gram models, not LSA's co-occurrence statistics.",
+          "claim": "Connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA."
         },
         {
           "ref": 5,
@@ -480,7 +500,8 @@
             "partially_supported",
             "insufficient_evidence"
           ],
-          "why": "New word-vector models beat earlier neural-network techniques; LSA is not mentioned."
+          "why": "New word-vector models beat earlier neural-network techniques; LSA is not mentioned.",
+          "claim": "Connectionist networks were developed that quickly outperformed the co-occurrence statistics used in LSA."
         },
         {
           "ref": 6,

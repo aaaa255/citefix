@@ -1,12 +1,14 @@
 """Judge every labelled claim several times with each judge model, to see how often step 2 flags a
 citation it should pass, lets through one it should flag, and changes its mind between runs.
 
-The claims are the cited sentences in eval/data/llm_passages.json, citation numbers removed, and the
-pairs in eval/data/support_sample.jsonl. Each reference is looked up once; only the judging repeats.
+The claims are those labelled in eval/data/llm_passages.json and eval/data/oa_passages.json (a citation's
+"claim" when it has one, otherwise its sentence with the citation numbers removed) and the pairs in
+eval/data/support_sample.jsonl. Each reference is looked up once; only the judging repeats.
 
 - should pass: labelled "supported" only. Any other verdict is a false alarm.
 - should be flagged: labelled without "supported". A "supported" verdict lets it through.
 - borderline: "supported" or another verdict both count as right.
+- too harsh: "not supported" (a red mark) where the labels allow only milder verdicts.
 
     python eval/run_judge_repeats.py [--models deepseek-flash deepseek-v4-pro] [--runs 3]
 """
@@ -28,7 +30,7 @@ sys.path.insert(0, str(ROOT))
 from citefix import llm  # noqa: E402
 from citefix.existence import check_many  # noqa: E402
 from citefix.review import split_passage  # noqa: E402
-from citefix.support import SUPPORTED, judge_support  # noqa: E402
+from citefix.support import SUPPORTED, UNSUPPORTED, judge_support  # noqa: E402
 
 MARKER = re.compile(r"\s*\[\d+(?:\s*[,–-]\s*\d+)*\]")
 GROUPS = ("pass", "flag", "borderline")
@@ -36,21 +38,24 @@ GROUPS = ("pass", "flag", "borderline")
 
 def labelled_claims() -> list[dict]:
     claims = []
-    data = json.loads((ROOT / "eval" / "data" / "llm_passages.json").read_text(encoding="utf-8"))
-    for passage in data["passages"]:
-        _, references = split_passage(passage["text"])
-        for cite in passage["citations"]:
-            accept = cite["accept"]
-            if accept is None:
-                continue  # the reference does not exist, so there is nothing to judge
-            group = "pass" if accept == [SUPPORTED] else "borderline" if SUPPORTED in accept else "flag"
-            claims.append({"id": f"{passage['id']}-{cite['ref']}", "claim": MARKER.sub("", cite["sentence"]),
-                           "reference": references[cite["ref"] - 1], "group": group, "accept": accept})
+    for name in ("llm_passages.json", "oa_passages.json"):
+        data = json.loads((ROOT / "eval" / "data" / name).read_text(encoding="utf-8"))
+        for passage in data["passages"]:
+            _, references = split_passage(passage["text"])
+            for n, cite in enumerate(passage["citations"]):
+                accept = cite["accept"]
+                if accept is None:
+                    continue  # no paper with an abstract to judge against
+                group = "pass" if accept == [SUPPORTED] else "borderline" if SUPPORTED in accept else "flag"
+                claims.append({"id": f"{passage['id']}-{cite['ref']}-{n}",
+                               "claim": cite.get("claim") or MARKER.sub("", cite["sentence"]),
+                               "reference": references[cite["ref"] - 1], "group": group, "accept": accept})
     for line in (ROOT / "eval" / "data" / "support_sample.jsonl").read_text(encoding="utf-8").splitlines():
         if line.strip():
             item = json.loads(line)
             claims.append({"id": item["id"], "claim": item["claim"], "reference": item["reference"],
-                           "group": "pass" if item["label"] == "supported" else "flag", "accept": None})
+                           "group": "pass" if item["label"] == "supported" else "flag", "accept": None,
+                           "label": item["label"]})
     return claims
 
 
@@ -71,6 +76,11 @@ def summarize(model: str, rows: list[dict]) -> None:
         print(text, rate(len(wrong), len(judged)), dict(Counter(r["verdict"] for r in judged)))
     exact = [r for r in mine if r["accept"]]
     print("verdict among the accepted ones:     ", rate(sum(r["verdict"] in r["accept"] for r in exact), len(exact)))
+    milder = [r for r in exact if UNSUPPORTED not in r["accept"]]
+    print("not supported where only milder fits:", rate(sum(r["verdict"] == UNSUPPORTED for r in milder), len(milder)))
+    wrong_paper = [r for r in mine if r.get("label") == "unsupported"]
+    print("hand-written wrong papers, not supported:", rate(sum(r["verdict"] == UNSUPPORTED for r in wrong_paper),
+                                                       len(wrong_paper)))
     by_claim: dict[str, list[dict]] = {}
     for r in mine:
         by_claim.setdefault(r["id"], []).append(r)
@@ -113,7 +123,7 @@ def main() -> int:
             except llm.LLMError:
                 verdict = "error"
             return {"model": model, "run": run, "id": claim["id"], "group": claim["group"],
-                    "accept": claim["accept"], "verdict": verdict}
+                    "accept": claim["accept"], "label": claim.get("label"), "verdict": verdict}
 
         with ThreadPoolExecutor(max_workers=6) as pool:
             rows += pool.map(judge, [(c, run) for run in range(1, args.runs + 1) for c in usable])
