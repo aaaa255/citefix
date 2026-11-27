@@ -1,11 +1,12 @@
 """Offline tests for steps 2 and 3 and the passage pipeline (no network, no model calls)."""
 
 import unittest
+from unittest import mock
 
-from citefix.repair import NONE_FOUND, Library, check_submission
+from citefix.repair import CITED, NONE_FOUND, REVISE, Library, check_submission
 from citefix.review import apa_reference, split_passage
 from citefix.sources import Candidate, _clean_markup, _inverted_to_text, _openalex_work
-from citefix.support import quote_in
+from citefix.support import PARTIAL, SUPPORTED, SupportResult, quote_in
 
 ABSTRACT = ("We propose a new simple network architecture, the Transformer, based solely on attention "
             "mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine "
@@ -102,11 +103,93 @@ class SubmissionTest(unittest.TestCase):
         self.assertEqual(outcome.decision, NONE_FOUND)
 
 
+QUOTE = "We propose a new simple network architecture, the Transformer, based solely on attention mechanisms."
+REWRITE = "The Transformer is based solely on attention."
+
+
+def judged(verdict):
+    """Stands in for the judge model, so these tests make no model calls."""
+    return mock.patch("citefix.repair.judge_support", return_value=SupportResult(verdict, QUOTE, True, "why"))
+
+
+class RewriteTest(unittest.TestCase):
+    """A rewrite carries a citation, so it must name the paper that supports it."""
+
+    def setUp(self):
+        self.cited = Candidate("openalex", "Attention Is All You Need", 2017, ["Ashish Vaswani"], abstract=ABSTRACT)
+        self.library = Library(self.cited)
+        self.other = self.library.add(Candidate("arxiv", "Another paper", 2020, ["Ann Author"], abstract=ABSTRACT))
+
+    def submit(self, pid, revised=REWRITE):
+        return check_submission({"decision": REVISE, "paper_id": pid, "quote": QUOTE, "revised_claim": revised,
+                                 "explanation": ""}, self.library, "The Transformer uses recurrence.")
+
+    def test_cited_paper_is_c_and_searches_count_from_p1(self):
+        self.assertEqual(self.other, "P1")
+        self.assertEqual(self.library.add(Candidate("crossref", "Attention is all you need.", 2017)), CITED)
+
+    def test_rewrite_supported_by_the_cited_paper_keeps_the_citation(self):
+        with judged(SUPPORTED):
+            outcome, _ = self.submit(CITED)
+        self.assertTrue(outcome.keeps_citation)
+        self.assertEqual(outcome.revised_claim, REWRITE)
+
+    def test_rewrite_supported_by_a_searched_paper_cites_that_paper(self):
+        with judged(SUPPORTED):
+            outcome, _ = self.submit(self.other)
+        self.assertFalse(outcome.keeps_citation)
+        self.assertEqual(outcome.paper.title, "Another paper")
+
+    def test_rewrite_without_a_paper_is_rejected(self):
+        outcome, objection = self.submit("")
+        self.assertIsNone(outcome)
+        self.assertIn("C or one of the ids", objection)
+
+    def test_rewrite_the_paper_only_partly_supports_is_rejected(self):
+        with judged(PARTIAL):
+            outcome, objection = self.submit(CITED)
+        self.assertIsNone(outcome)
+        self.assertIn("does not fully support", objection)
+
+    def test_reference_not_found_cannot_keep_its_citation(self):
+        library = Library()  # no index had the cited reference
+        outcome, objection = check_submission({"decision": REVISE, "paper_id": CITED, "quote": QUOTE,
+                                               "revised_claim": REWRITE, "explanation": ""}, library, "claim")
+        self.assertIsNone(outcome)
+        self.assertNotIn("C or", objection)
+
+    def test_cited_paper_without_an_abstract_cannot_back_a_rewrite(self):
+        library = Library(Candidate("openalex", "Attention Is All You Need", 2017))
+        outcome, objection = check_submission({"decision": REVISE, "paper_id": CITED, "quote": QUOTE,
+                                               "revised_claim": REWRITE, "explanation": ""}, library, "claim")
+        self.assertIsNone(outcome)
+        self.assertIn("no abstract", objection)
+
+    def test_replacing_a_citation_with_itself_is_rejected(self):
+        outcome, objection = check_submission({"decision": "replace", "paper_id": CITED, "quote": QUOTE,
+                                               "explanation": ""}, self.library, "claim")
+        self.assertIsNone(outcome)
+        self.assertIn("already cited", objection)
+
+
 class SplitPassageTest(unittest.TestCase):
     def test_splits_at_heading(self):
         body, refs = split_passage("Claim one [1].\n\nReferences\n[1] A. (2020). T.\n\n[2] B. (2021). U.\n")
         self.assertEqual(body, "Claim one [1].")
         self.assertEqual(refs, ["[1] A. (2020). T.", "[2] B. (2021). U."])
+
+    def test_heading_at_the_end_of_the_last_sentence(self):
+        body, refs = split_passage("Intro. Claim two [2]. References\n[1] A. (2020). T.\n[2] B. (2021). U.")
+        self.assertEqual(body, "Intro. Claim two [2].")
+        self.assertEqual(refs, ["[1] A. (2020). T.", "[2] B. (2021). U."])
+
+    def test_heading_at_the_end_before_an_unnumbered_list(self):
+        _, refs = split_passage("Claim (Smith, 2020). References:\nSmith, J. (2020). A title. Journal, 1.")
+        self.assertEqual(refs, ["Smith, J. (2020). A title. Journal, 1."])
+
+    def test_the_word_at_the_end_of_prose_is_not_a_heading(self):
+        text = "We read them all. References\nThis is more of the passage, not a list."
+        self.assertEqual(split_passage(text), (text, []))
 
     def test_chinese_heading(self):
         _, refs = split_passage("正文。\n参考文献\n周志华. 机器学习[M]. 2016.")

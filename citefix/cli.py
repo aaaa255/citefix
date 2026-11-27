@@ -76,6 +76,14 @@ def print_review(review) -> None:
                 print(f'       evidence: "{fix.quote}"')
             elif fix.decision == REVISE:
                 print(f"     suggestion: rewrite the claim as: {fix.revised_claim}")
+                if fix.keeps_citation:
+                    print(f"       keep [{claim.ref_number}]: its abstract supports the rewrite, checked: {fix.check}")
+                elif fix.paper:
+                    authors = ", ".join(fix.paper.authors[:3])
+                    print(f'       and cite "{fix.paper.title}" ({authors}, {fix.paper.year}) instead of '
+                          f"[{claim.ref_number}], checked: {fix.check}")
+                if fix.quote:
+                    print(f'       evidence: "{fix.quote}"')
                 print(f"       why: {fix.explanation}")
             else:
                 print(f"     no supporting paper found: {fix.explanation}")

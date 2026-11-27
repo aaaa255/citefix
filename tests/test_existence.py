@@ -1,8 +1,10 @@
 """Offline tests of how candidate records are scored and judged (no network)."""
 
 import unittest
+from unittest import mock
 
-from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, decide, score
+from citefix import sources
+from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, _pick_abstract, decide, score
 from citefix.sources import Candidate
 from citefix.textutil import parse_reference
 
@@ -12,6 +14,55 @@ BERT = parse_reference("Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019
                        "bidirectional transformers for language understanding. Proceedings of NAACL-HLT, 4171–4186. "
                        "https://doi.org/10.18653/v1/N19-1423")
 BERT_TITLE = "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
+SEIMON = parse_reference("Seimon, R. V., Roekenes, J. A., & Sainsbury, A. (2015). Do intermittent diets provide "
+                         "physiological benefits over continuous diets for weight loss? A systematic review of "
+                         "clinical trials. Molecular and Cellular Endocrinology, 418, 153–172.")
+SEIMON_TITLE = ("Do intermittent diets provide physiological benefits over continuous diets for weight loss? "
+                "A systematic review of clinical trials")
+
+
+class CutShortTitleTest(unittest.TestCase):
+    """The parser stops a title at a question mark, so it loses the subtitle that follows."""
+
+    def test_the_full_title_in_the_reference_is_the_same_paper(self):
+        self.assertTrue(SEIMON.title.endswith("weight loss?"))
+        found = score(SEIMON, Candidate("openalex", SEIMON_TITLE, 2015, ["Radhika V. Seimon"]))
+        self.assertEqual(found.score, 1.0)
+        self.assertEqual(decide(SEIMON, [found])[0], VERIFIED)
+
+    def test_another_subtitle_is_not_taken_for_it(self):
+        other = SEIMON_TITLE.split("?")[0] + "? A randomised trial in older adults living with type 2 diabetes"
+        self.assertLess(score(SEIMON, Candidate("openalex", other, 2015, ["Radhika V. Seimon"])).score, 0.9)
+
+
+class PubMedAbstractTest(unittest.TestCase):
+    ESEARCH = b'{"esearchresult": {"idlist": ["26384657"]}}'
+    EFETCH = ("<PubmedArticleSet><PubmedArticle><MedlineCitation><Article>"
+              f"<ArticleTitle>{SEIMON_TITLE}.</ArticleTitle><Abstract>"
+              '<AbstractText Label="BACKGROUND">Energy restriction <i>hinders</i> weight loss.</AbstractText>'
+              '<AbstractText Label="RESULTS">Intermittent fasting is not superior.</AbstractText>'
+              "</Abstract></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>").encode()
+
+    def test_reads_a_structured_abstract(self):
+        with mock.patch("citefix.sources._get", side_effect=[self.ESEARCH, self.EFETCH]):
+            title, abstract = sources.pubmed_abstract("10.1016/j.mce.2015.09.014")
+        self.assertEqual(title, SEIMON_TITLE + ".")
+        self.assertEqual(abstract, "BACKGROUND: Energy restriction hinders weight loss. "
+                                   "RESULTS: Intermittent fasting is not superior.")
+
+    def test_used_when_no_index_has_the_abstract(self):
+        record = Candidate("openalex", SEIMON_TITLE, 2015, ["Radhika V. Seimon"], doi="10.1016/j.mce.2015.09.014")
+        match = score(SEIMON, record)
+        with mock.patch("citefix.sources.pubmed_abstract", return_value=(SEIMON_TITLE, "From PubMed.")) as lookup:
+            self.assertEqual(_pick_abstract(match, [match], []), ("From PubMed.", "pubmed"))
+        lookup.assert_called_once_with("10.1016/j.mce.2015.09.014")
+
+    def test_a_pubmed_record_with_another_title_is_ignored(self):
+        record = Candidate("openalex", SEIMON_TITLE, 2015, ["Radhika V. Seimon"], doi="10.1016/j.mce.2015.09.014")
+        match = score(SEIMON, record)
+        with mock.patch("citefix.sources.pubmed_abstract", return_value=("Erratum", "Not this.")), \
+                mock.patch("citefix.sources.arxiv", return_value=[]):
+            self.assertEqual(_pick_abstract(match, [match], []), (None, None))
 
 
 class ScoreTest(unittest.TestCase):

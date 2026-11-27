@@ -6,20 +6,27 @@ those events to the browser as they happen.
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 
 from . import llm
-from .existence import NOT_FOUND, ExistenceResult, check_reference
+from .existence import NOT_FOUND, SAME_PAPER, ExistenceResult, check_reference
 from .repair import RepairResult, find_support
 from .sources import Candidate
 from .support import SUPPORTED, SupportResult, judge_support
+from .textutil import parse_reference
 
 Emit = Callable[[str, dict], None]
 
 _HEADING = re.compile(r"^\s*(references|bibliography|works cited|参考文献)\s*[:：]?\s*$", re.IGNORECASE)
+# The same heading run onto the end of the last sentence, as chat answers sometimes have it:
+# "...remains an open research challenge [5]. References"
+_TRAILING_HEADING = re.compile(r"^(.*[.!?。)\]])\s*(?:references|bibliography|works cited|参考文献)\s*[:：]?\s*$",
+                               re.IGNORECASE)
+_LIST_NUMBER = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
 
 EXTRACT_SYSTEM = """You find the citations in a passage from a manuscript.
 You are given the passage and its numbered reference list. For every place where the passage cites
@@ -51,12 +58,24 @@ class Review:
         return asdict(self)
 
 
+def _starts_a_list(line: str) -> bool:
+    """Does this line look like the first entry of a reference list?"""
+    ref = parse_reference(line)
+    return bool(_LIST_NUMBER.match(line) or (ref.first_author and ref.year))
+
+
 def split_passage(text: str) -> tuple[str, list[str]]:
-    """Split at a "References" (or "参考文献") line: body above, one reference per line below."""
+    """Split at a "References" (or "参考文献") line: body above, one reference per line below.
+    A heading at the end of the last sentence counts too, when a reference list follows it."""
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if _HEADING.match(line):
             return "\n".join(lines[:i]).strip(), [r.strip() for r in lines[i + 1:] if r.strip()]
+    for i, line in enumerate(lines):
+        trailing = _TRAILING_HEADING.match(line)
+        rest = [r.strip() for r in lines[i + 1:] if r.strip()]
+        if trailing and rest and _starts_a_list(rest[0]):
+            return "\n".join([*lines[:i], trailing.group(1)]).strip(), rest
     return text.strip(), []
 
 
@@ -171,12 +190,17 @@ def _check_claim(index: int, cite: dict, number: int, ref: ExistenceResult, repa
                            f"({result.support.verdict}): {result.support.explanation}")
         if problem and repair:
             emit("agent_start", key)
-            fix = find_support(cite["claim"], ref.reference, problem, on_step=lambda step: emit(
+            # The agent may rewrite the claim to fit the cited paper, so it gets that paper when an index has it.
+            cited_paper = None
+            if ref.match and ref.match.score >= SAME_PAPER:
+                cited_paper = dataclasses.replace(ref.match.cand, abstract=ref.abstract)
+            fix = find_support(cite["claim"], ref.reference, problem, cited_paper=cited_paper, on_step=lambda step: emit(
                 "agent_step", {**key, "action": step.action, "detail": step.detail, "results": step.results,
                                "errors": step.errors}))
             result.repair = fix
             emit("repair", {**key, "decision": fix.decision, "paper": paper_info(fix.paper), "quote": fix.quote,
-                            "explanation": fix.explanation, "revised_claim": fix.revised_claim, "check": fix.check})
+                            "explanation": fix.explanation, "revised_claim": fix.revised_claim, "check": fix.check,
+                            "keeps_citation": fix.keeps_citation})
     except llm.LLMError as err:
         emit("claim_error", {**key, "message": str(err)})
     return result

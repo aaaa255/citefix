@@ -1,0 +1,517 @@
+{
+  "about": "Literature-review paragraphs that deepseek-v4-pro wrote from the prompt in each passage (thinking off), the way a student might ask a chatbot for one. Each reference was looked up in OpenAlex, Crossref and PubMed, and by a web search when no record turned up; each citation was judged against the cited paper's abstract (from PubMed where OpenAlex and Crossref have none). Labels by Claude (AI), made before citefix was run on these passages, and not yet reviewed by a person. In references, label is real, real_error or fabricated. In citations, accept lists the step 2 verdicts that count as right (null when the reference does not exist); why says what the abstract does and does not say.",
+  "passages": [
+    {
+      "id": "p01",
+      "topic": "how retrieval practice (the testing effect) improves long-term retention in university students",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on how retrieval practice (the testing effect) improves long-term retention in university students. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "A substantial body of research has established retrieval practice as a robust strategy for enhancing long-term retention among university students, often outperforming restudy or concept mapping. Roediger and Karpicke [1] demonstrated that repeated testing produced superior delayed recall relative to repeated reading, even though learners predicted the opposite. Expanding on this, Karpicke and Blunt [2] found that practicing retrieval during learning yielded better retention of complex science texts than elaborative concept mapping. Applied to real classroom settings, McDaniel et al. [3] showed that weekly low-stakes quizzes significantly improved performance on cumulative exams in an undergraduate psychology course. The benefits of testing extend beyond verbatim recall, as Butler [4] reported that retrieval practice promoted the transfer of knowledge to new inferential questions. Furthermore, a meta-analysis by Adesope et al. [5] confirmed a moderate to large effect of testing on retention across diverse educational contexts, underscoring its practical value for university instruction.\n\nReferences\n[1] Roediger, H. L., III, & Karpicke, J. D. (2006). Test-enhanced learning: Taking memory tests improves long-term retention. Psychological Science, 17(3), 249–255.\n[2] Karpicke, J. D., & Blunt, J. R. (2011). Retrieval practice produces more learning than elaborative studying with concept mapping. Science, 331(6018), 772–775.\n[3] McDaniel, M. A., Anderson, J. L., Derbish, M. H., & Morrisette, N. (2007). Testing the testing effect in the classroom. European Journal of Cognitive Psychology, 19(4–5), 494–513.\n[4] Butler, A. C. (2010). Repeated testing produces superior transfer of learning relative to repeated studying. Journal of Experimental Psychology: Learning, Memory, and Cognition, 36(5), 1118–1133.\n[5] Adesope, O. O., Trevisan, D. A., & Sundararajan, N. (2017). Rethinking the use of tests: A meta-analysis of practice testing. Review of Educational Research, 87(3), 659–701.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Roediger & Karpicke (2006), Psychological Science 17(3), 249-255, doi:10.1111/j.1467-9280.2006.01693.x",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Karpicke & Blunt (2011), Science 331(6018), 772-775, doi:10.1126/science.1199327",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "McDaniel et al. (2007), European Journal of Cognitive Psychology 19(4-5), 494-513, doi:10.1080/09541440701326154",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Butler (2010), Journal of Experimental Psychology: LMC 36(5), 1118-1133, doi:10.1037/a0019902",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "record": "Adesope et al. (2017), Review of Educational Research 87(3), 659-701, doi:10.3102/0034654316689306",
+          "note": ""
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Roediger and Karpicke [1] demonstrated that repeated testing produced superior delayed recall relative to repeated reading, even though learners predicted the opposite.",
+          "accept": [
+            "supported"
+          ],
+          "why": "Prior testing beat restudying on the delayed tests, although restudying made students more confident."
+        },
+        {
+          "ref": 2,
+          "sentence": "Expanding on this, Karpicke and Blunt [2] found that practicing retrieval during learning yielded better retention of complex science texts than elaborative concept mapping.",
+          "accept": [
+            "supported"
+          ],
+          "why": "Retrieval practice produced more meaningful learning than concept mapping, with science texts."
+        },
+        {
+          "ref": 3,
+          "sentence": "Applied to real classroom settings, McDaniel et al. [3] showed that weekly low-stakes quizzes significantly improved performance on cumulative exams in an undergraduate psychology course.",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Weekly quizzes improved unit and cumulative exam scores in a college course. The abstract does not say the quizzes were low-stakes or that the course was psychology."
+        },
+        {
+          "ref": 4,
+          "sentence": "The benefits of testing extend beyond verbatim recall, as Butler [4] reported that retrieval practice promoted the transfer of knowledge to new inferential questions.",
+          "accept": [
+            "supported"
+          ],
+          "why": "Repeated testing improved retention and transfer to new inferential questions."
+        },
+        {
+          "ref": 5,
+          "sentence": "Furthermore, a meta-analysis by Adesope et al. [5] confirmed a moderate to large effect of testing on retention across diverse educational contexts, underscoring its practical value for university instruction.",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "Practice tests beat restudying and other conditions, but the abstract gives no effect size, so 'moderate to large' and the university setting are not in it."
+        }
+      ]
+    },
+    {
+      "id": "p02",
+      "topic": "social media use and depressive symptoms in adolescents",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on social media use and depressive symptoms in adolescents. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "Research over the past decade has established a consistent but complex association between social media use and depressive symptoms in adolescents. Cross-sectional studies have repeatedly found that adolescents who spend more time on social media platforms report higher levels of depressive symptoms, with effects strongest for passive consumption and upward social comparison [1]. Longitudinal evidence indicates that the temporal direction may be bidirectional, as depressive symptoms can also predict increased social media use over time, suggesting a potential reinforcing cycle [2]. Individual differences appear critical, as the association is most pronounced among adolescent girls and those with low self-esteem or high baseline rumination [3]. Proposed mechanisms include disrupted sleep, reduced face-to-face interaction, and exposure to idealized self-presentations that trigger envy and negative self-evaluation [4]. However, not all engagement is harmful; active, positive, and socially supportive use may show null or even protective associations, highlighting the need to move beyond simple screen-time metrics [5].  \n\nReferences  \n[1] Frison, E., & Eggermont, S. (2016). Exploring the relationships between different types of Facebook use, perceived online social support, and adolescents’ depressed mood. Social Science Computer Review, 34(2), 153–171. https://doi.org/10.1177/0894439314567449  \n[2] Raudsepp, L., & Kais, K. (2019). Longitudinal associations between problematic social media use and depressive symptoms in adolescent girls. Preventive Medicine Reports, 15, 100925. https://doi.org/10.1016/j.pmedr.2019.100925  \n[3] Nesi, J., & Prinstein, M. J. (2015). Using social media for social comparison and feedback-seeking: Gender and popularity moderate associations with depressive symptoms. Journal of Abnormal Child Psychology, 43(8), 1427–1438. https://doi.org/10.1007/s10802-015-0020-0  \n[4] Boers, E., Afzali, M. H., Newton, N., & Conrod, P. (2019). Association of screen time and depression in adolescence. JAMA Pediatrics, 173(9), 853–859. https://doi.org/10.1001/jamapediatrics.2019.1759  \n[5] Orben, A., Dienlin, T., & Przybylski, A. K. (2019). Social media’s enduring effect on adolescent life satisfaction. Proceedings of the National Academy of Sciences, 116(21), 10226–10228. https://doi.org/10.1073/pnas.1902058116",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Frison & Eggermont, Social Science Computer Review 34(2), 153-171, doi:10.1177/0894439314567449",
+          "note": "The indexes date it 2015, when it appeared online; the issue is 2016."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Raudsepp & Kais (2019), Preventive Medicine Reports 15, 100925, doi:10.1016/j.pmedr.2019.100925",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "Nesi & Prinstein (2015), Journal of Abnormal Child Psychology 43(8), 1427-1438, doi:10.1007/s10802-015-0020-0",
+          "note": "No abstract in OpenAlex or Crossref; PubMed has one."
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Boers et al. (2019), JAMA Pediatrics 173(9), 853-859, doi:10.1001/jamapediatrics.2019.1759",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "record": "Orben, Dienlin & Przybylski (2019), PNAS 116(21), 10226-10228, doi:10.1073/pnas.1902058116",
+          "note": "No abstract in OpenAlex; Crossref has one."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Cross-sectional studies have repeatedly found that adolescents who spend more time on social media platforms report higher levels of depressive symptoms, with effects strongest for passive consumption and upward social comparison [1].",
+          "accept": [
+            "partially_supported",
+            "not_supported",
+            "insufficient_evidence"
+          ],
+          "why": "The study compares types of Facebook use: passive use was harmful only for girls, and active public use for boys. Time spent and upward social comparison are not in the abstract."
+        },
+        {
+          "ref": 2,
+          "sentence": "Longitudinal evidence indicates that the temporal direction may be bidirectional, as depressive symptoms can also predict increased social media use over time, suggesting a potential reinforcing cycle [2].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "Depressive symptoms predicted later increases in problematic social media use, but problematic use did not predict later depressive symptoms, so the direction found was one-way; the measure is problematic use, not use."
+        },
+        {
+          "ref": 3,
+          "sentence": "Individual differences appear critical, as the association is most pronounced among adolescent girls and those with low self-esteem or high baseline rumination [3].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "The association was stronger in girls and in adolescents low in popularity. Self-esteem and rumination are not mentioned."
+        },
+        {
+          "ref": 4,
+          "sentence": "Proposed mechanisms include disrupted sleep, reduced face-to-face interaction, and exposure to idealized self-presentations that trigger envy and negative self-evaluation [4].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "The results support upward social comparison as an explanation and not displacement; sleep is not mentioned."
+        },
+        {
+          "ref": 5,
+          "sentence": "However, not all engagement is harmful; active, positive, and socially supportive use may show null or even protective associations, highlighting the need to move beyond simple screen-time metrics [5].",
+          "accept": [
+            "insufficient_evidence",
+            "partially_supported",
+            "not_supported"
+          ],
+          "why": "Social media use is a weak, nuanced predictor of life satisfaction. The abstract does not compare active, positive or supportive use with other use."
+        }
+      ]
+    },
+    {
+      "id": "p03",
+      "topic": "microplastic pollution in freshwater ecosystems and its effects on fish",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on microplastic pollution in freshwater ecosystems and its effects on fish. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "Microplastic contamination has been increasingly documented in freshwater systems worldwide, with studies confirming widespread distribution across lakes, rivers, and reservoirs [1]. Research has shown that fish ingest these particles through both direct consumption and trophic transfer, with microplastics detected in gastrointestinal tracts and muscle tissue of multiple freshwater species [2]. Experimental exposure studies have demonstrated adverse effects on fish health, including reduced feeding activity, oxidative stress, and histopathological changes in the liver and gills [3]. Additionally, microplastics have been found to act as vectors for other environmental contaminants, such as heavy metals and persistent organic pollutants, which may desorb within fish digestive systems and amplify toxic effects [4]. Recent work has also identified transgenerational impacts, where parental exposure to microplastics altered offspring survival and developmental trajectories in model fish species, suggesting population-level consequences beyond individual toxicity [5].  \n\nReferences  \n[1] Eerkes-Medrano, D., Thompson, R. C., & Aldridge, D. C. (2015). Microplastics in freshwater systems: A review of the emerging threats, identification of knowledge gaps and prioritisation of research needs. Water Research, 75, 63–82.  \n[2] Horton, A. A., Walton, A., Spurgeon, D. J., Lahive, E., & Svendsen, C. (2017). Microplastics in freshwater and terrestrial environments: Evaluating the current understanding to identify the knowledge gaps and future research priorities. Science of the Total Environment, 586, 127–141.  \n[3] Lu, Y., Zhang, Y., Deng, Y., Jiang, W., Zhao, Y., Geng, J., Ding, L., & Ren, H. (2016). Uptake and accumulation of polystyrene microplastics in zebrafish (Danio rerio) and toxic effects in liver. Environmental Science & Technology, 50(7), 4054–4060.  \n[4] Rochman, C. M., Hoh, E., Kurobe, T., & Teh, S. J. (2013). Ingested plastic transfers hazardous chemicals to fish and induces hepatic stress. Scientific Reports, 3, 3263.  \n[5] Wang, W., Ge, J., Yu, X., & Li, H. (2021). Environmental microplastics exposure affects offspring phenotype in zebrafish: A transgenerational study. Journal of Hazardous Materials, 401, 123456.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Eerkes-Medrano, Thompson & Aldridge (2015), Water Research 75, 63-82, doi:10.1016/j.watres.2015.02.012",
+          "note": "No abstract in OpenAlex or Crossref; PubMed has one."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Horton et al. (2017), Science of the Total Environment 586, 127-141, doi:10.1016/j.scitotenv.2017.01.190",
+          "note": "No abstract in OpenAlex or Crossref; PubMed has one."
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "Lu et al. (2016), Environmental Science & Technology 50(7), 4054-4060, doi:10.1021/acs.est.6b00183",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Rochman et al. (2013), Scientific Reports 3, 3263, doi:10.1038/srep03263",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "fabricated",
+          "record": "",
+          "note": "No record of this title in OpenAlex or Crossref, nor in a web search. W. Wang, J. Ge, X. Yu and H. Li wrote a real 2020 review on microplastics in soil (Science of the Total Environment 708, 134841), and article 123456 of the Journal of Hazardous Materials is an unrelated paper in volume 402."
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Microplastic contamination has been increasingly documented in freshwater systems worldwide, with studies confirming widespread distribution across lakes, rivers, and reservoirs [1].",
+          "accept": [
+            "partially_supported",
+            "insufficient_evidence"
+          ],
+          "why": "Early studies found microplastics in freshwaters of Europe, North America and Asia, but the abstract also says their distribution is still poorly understood; reservoirs are not mentioned."
+        },
+        {
+          "ref": 2,
+          "sentence": "Research has shown that fish ingest these particles through both direct consumption and trophic transfer, with microplastics detected in gastrointestinal tracts and muscle tissue of multiple freshwater species [2].",
+          "accept": [
+            "insufficient_evidence",
+            "not_supported"
+          ],
+          "why": "A review of the presence and fate of microplastics in freshwater and on land; fish ingestion, trophic transfer and where particles end up in fish are not in the abstract."
+        },
+        {
+          "ref": 3,
+          "sentence": "Experimental exposure studies have demonstrated adverse effects on fish health, including reduced feeding activity, oxidative stress, and histopathological changes in the liver and gills [3].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "Oxidative stress, and inflammation and lipid build-up in the liver, are reported. Particles accumulated in the gills, but no gill damage or reduced feeding is reported."
+        },
+        {
+          "ref": 4,
+          "sentence": "Additionally, microplastics have been found to act as vectors for other environmental contaminants, such as heavy metals and persistent organic pollutants, which may desorb within fish digestive systems and amplify toxic effects [4].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Fish fed plastic carrying sorbed pollutants took them up and had worse liver damage than fish fed clean plastic. The pollutants are not said to include heavy metals."
+        },
+        {
+          "ref": 5,
+          "sentence": "Recent work has also identified transgenerational impacts, where parental exposure to microplastics altered offspring survival and developmental trajectories in model fish species, suggesting population-level consequences beyond individual toxicity [5].",
+          "accept": null,
+          "why": "The reference does not exist, so there is no abstract to check the sentence against."
+        }
+      ]
+    },
+    {
+      "id": "p04",
+      "topic": "the employment effects of minimum wage increases",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on the employment effects of minimum wage increases. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "A substantial body of empirical research has examined the employment effects of minimum wage increases, producing a range of findings that have evolved with improved methodologies. Early time-series studies, such as Brown, Gilroy, and Kohen [1], generally found a negative but small effect on teenage employment, consistent with the competitive model. However, the influential case-study approach of Card and Krueger [2], which compared fast-food employment in New Jersey and Pennsylvania following a state minimum wage increase, found no evidence of reduced employment and even suggested a positive effect, challenging the conventional wisdom. Subsequent work using more precise county-level panel data, including Dube, Lester, and Reich [3], found that minimum wage increases had no significant impact on employment in low-wage sectors, attributing earlier negative findings to confounding regional trends. In contrast, Neumark and Wascher [4], using a different set of policy variation and controls, concluded that minimum wages do reduce employment opportunities for the least-skilled workers. More recent studies, such as Cengiz et al. [5], which use a novel bunching methodology on administrative data, find that the overall employment effect is driven primarily by a reduction in jobs below the new minimum, with no significant change in total employment, as job losses are offset by shifts to higher-paying positions. The literature thus remains divided on the magnitude and even the sign of the employment effect, with consensus existing only on the heterogeneity of impacts across worker subgroups and local labor markets.\n\nReferences\n[1] Brown, C., Gilroy, C., & Kohen, A. (1982). The effect of the minimum wage on employment and unemployment. Journal of Economic Literature, 20(2), 487–528.\n[2] Card, D., & Krueger, A. B. (1994). Minimum wages and employment: A case study of the fast-food industry in New Jersey and Pennsylvania. American Economic Review, 84(4), 772–793.\n[3] Dube, A., Lester, T. W., & Reich, M. (2010). Minimum wage effects across state borders: Estimates using contiguous counties. The Review of Economics and Statistics, 92(4), 945–964.\n[4] Neumark, D., & Wascher, W. (2007). Minimum wages and employment. Foundations and Trends in Microeconomics, 3(1–2), 1–182.\n[5] Cengiz, D., Dube, A., Lindner, A., & Zipperer, B. (2019). The effect of minimum wages on low-wage jobs. The Quarterly Journal of Economics, 134(3), 1405–1454.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Brown, Gilroy & Kohen (1982), Journal of Economic Literature 20(2), 487-528",
+          "note": "No DOI. The text OpenAlex holds as its abstract is the acknowledgments."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Card & Krueger (1994), American Economic Review 84(4), 772-793",
+          "note": "OpenAlex and Crossref return the 1993 NBER working paper and the 2000 comment and reply; the 1994 article itself did not come up."
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "Dube, Lester & Reich (2010), Review of Economics and Statistics 92(4), 945-964, doi:10.1162/rest_a_00039",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Neumark & Wascher, Foundations and Trends in Microeconomics 3(1-2), 1-182, doi:10.1561/0700000015",
+          "note": "The indexes date it 2006; cited as 2007."
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "record": "Cengiz et al. (2019), Quarterly Journal of Economics 134(3), 1405-1454, doi:10.1093/qje/qjz014",
+          "note": ""
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Early time-series studies, such as Brown, Gilroy, and Kohen [1], generally found a negative but small effect on teenage employment, consistent with the competitive model.",
+          "accept": [
+            "insufficient_evidence",
+            "not_supported"
+          ],
+          "why": "No usable abstract: the text OpenAlex holds is the paper's acknowledgments."
+        },
+        {
+          "ref": 2,
+          "sentence": "However, the influential case-study approach of Card and Krueger [2], which compared fast-food employment in New Jersey and Pennsylvania following a state minimum wage increase, found no evidence of reduced employment and even suggested a positive effect, challenging the conventional wisdom.",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "The working paper's abstract says New Jersey stores increased employment relative to Pennsylvania, against the prediction of job losses."
+        },
+        {
+          "ref": 3,
+          "sentence": "Subsequent work using more precise county-level panel data, including Dube, Lester, and Reich [3], found that minimum wage increases had no significant impact on employment in low-wage sectors, attributing earlier negative findings to confounding regional trends.",
+          "accept": [
+            "supported"
+          ],
+          "why": "Contiguous county pairs show no adverse employment effects, and negative estimates are put down to regional employment trends."
+        },
+        {
+          "ref": 4,
+          "sentence": "In contrast, Neumark and Wascher [4], using a different set of policy variation and controls, concluded that minimum wages do reduce employment opportunities for the least-skilled workers.",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "The review finds the evidence of job losses strongest for the least-skilled. It is a literature review, not a study with its own policy variation, as the sentence implies."
+        },
+        {
+          "ref": 5,
+          "sentence": "More recent studies, such as Cengiz et al. [5], which use a novel bunching methodology on administrative data, find that the overall employment effect is driven primarily by a reduction in jobs below the new minimum, with no significant change in total employment, as job losses are offset by shifts to higher-paying positions.",
+          "accept": [
+            "partially_supported",
+            "supported"
+          ],
+          "why": "The number of low-wage jobs stayed about the same, with missing jobs below the new minimum offset by extra jobs at or just above it. Administrative data and total employment are not in the abstract."
+        }
+      ]
+    },
+    {
+      "id": "p05",
+      "topic": "intermittent fasting compared with continuous calorie restriction for weight loss",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on intermittent fasting compared with continuous calorie restriction for weight loss. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "Previous research has examined intermittent fasting and continuous calorie restriction as alternative dietary strategies for weight management, often reporting comparable outcomes. Randomized controlled trials have demonstrated that alternate-day fasting and time-restricted eating can produce clinically meaningful weight loss similar to daily caloric restriction over 8 to 12 weeks, with no significant between-group differences in body composition or metabolic markers [1]. A systematic review and meta-analysis of 11 trials concluded that intermittent fasting protocols and continuous energy restriction yield equivalent reductions in body weight and fat mass, although adherence patterns vary across protocols [2]. Additional work has highlighted that the simplicity of time-restricted eating may enhance long-term adherence for some individuals, while others find continuous restriction more sustainable due to fewer dietary rules [3]. However, several studies have noted that early trials were limited by small samples and short durations, making it difficult to assess long-term maintenance [4]. More recent evidence from a 12-month trial found that both approaches produced modest but comparable weight loss, with no superior metabolic advantage for intermittent fasting, reinforcing the view that adherence is the primary determinant of success [5].\n\nReferences\n[1] Harvie, M. N., Pegington, M., Mattson, M. P., Frystyk, J., Dillon, B., Evans, G., Cuzick, J., Jebb, S. A., Martin, B., Cutler, R. G., Son, T. G., Maudsley, S., Carlson, O. D., Egan, J. M., Flyvbjerg, A., & Howell, A. (2011). The effects of intermittent or continuous energy restriction on weight loss and metabolic disease risk markers: A randomized trial in young overweight women. International Journal of Obesity, 35(5), 714–727. https://doi.org/10.1038/ijo.2010.171\n[2] Seimon, R. V., Roekenes, J. A., Zibellini, J., Zhu, B., Gibson, A. A., Hills, A. P., Wood, R. E., King, N. A., Byrne, N. M., & Sainsbury, A. (2015). Do intermittent diets provide physiological benefits over continuous diets for weight loss? A systematic review of clinical trials. Molecular and Cellular Endocrinology, 418(Pt 2), 153–172. https://doi.org/10.1016/j.mce.2015.09.014\n[3] Harris, L., Hamilton, S., Azevedo, L. B., Olajide, J., Debrún, C., Waller, G., Whittaker, V., Sharp, T., Lean, M., Hankey, C., & Ells, L. (2018). Intermittent fasting interventions for treatment of overweight and obesity in adults: A systematic review and meta-analysis. JBI Database of Systematic Reviews and Implementation Reports, 16(2), 507–547. https://doi.org/10.11124/JBISRIR-2016-003248\n[4] Trepanowski, J. F., Kroeger, C. M., Barnosky, A., Klempel, M. C., Bhutani, S., Hoddy, K. K., Gabel, K., Freels, S., Rigdon, J., Rood, J., Ravussin, E., & Varady, K. A. (2017). Effect of alternate-day fasting on weight loss, weight maintenance, and cardioprotection among metabolically healthy obese adults: A randomized clinical trial. JAMA Internal Medicine, 177(7), 930–938. https://doi.org/10.1001/jamainternmed.2017.0936\n[5] Liu, D., Huang, Y., Huang, C., Yang, S., Wei, X., Zhang, P., Guo, D., Lin, J., Xu, B., Li, C., He, H., He, J., Liu, S., Shi, L., Xue, Y., Zhang, C., & Qian, S. (2022). Calorie restriction with or without time-restricted eating in weight loss. New England Journal of Medicine, 386(16), 1495–1504. https://doi.org/10.1056/NEJMoa2114833",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Harvie et al., International Journal of Obesity 35(5), 714-727, doi:10.1038/ijo.2010.171",
+          "note": "The indexes date it 2010, when it appeared online; the issue is 2011. No abstract in OpenAlex or Crossref; PubMed has one."
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Seimon et al. (2015), Molecular and Cellular Endocrinology 418, 153-172, doi:10.1016/j.mce.2015.09.014",
+          "note": "No abstract in OpenAlex or Crossref; PubMed has one."
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "Harris et al. (2018), JBI Database of Systematic Reviews and Implementation Reports 16(2), 507-547, doi:10.11124/JBISRIR-2016-003248",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Trepanowski et al. (2017), JAMA Internal Medicine 177(7), 930-938, doi:10.1001/jamainternmed.2017.0936",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "record": "Liu et al. (2022), New England Journal of Medicine 386(16), 1495-1504, doi:10.1056/NEJMoa2114833",
+          "note": ""
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Randomized controlled trials have demonstrated that alternate-day fasting and time-restricted eating can produce clinically meaningful weight loss similar to daily caloric restriction over 8 to 12 weeks, with no significant between-group differences in body composition or metabolic markers [1].",
+          "accept": [
+            "partially_supported",
+            "not_supported"
+          ],
+          "why": "Weight loss was similar, but the trial tested two restricted days a week, not alternate-day fasting or time-restricted eating, over 6 months, and insulin resistance fell more with intermittent restriction."
+        },
+        {
+          "ref": 2,
+          "sentence": "A systematic review and meta-analysis of 11 trials concluded that intermittent fasting protocols and continuous energy restriction yield equivalent reductions in body weight and fat mass, although adherence patterns vary across protocols [2].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "A systematic review of 40 publications, 12 with a direct comparison, with no meta-analysis. Weight and fat mass fell similarly; adherence is not mentioned."
+        },
+        {
+          "ref": 3,
+          "sentence": "Additional work has highlighted that the simplicity of time-restricted eating may enhance long-term adherence for some individuals, while others find continuous restriction more sustainable due to fewer dietary rules [3].",
+          "accept": [
+            "not_supported",
+            "insufficient_evidence"
+          ],
+          "why": "The review compares intermittent energy restriction with continuous restriction or no treatment; time-restricted eating and adherence are not in the abstract."
+        },
+        {
+          "ref": 4,
+          "sentence": "However, several studies have noted that early trials were limited by small samples and short durations, making it difficult to assess long-term maintenance [4].",
+          "accept": [
+            "partially_supported",
+            "supported"
+          ],
+          "why": "The abstract says no long-term randomized trials had evaluated alternate-day fasting; small samples are not mentioned."
+        },
+        {
+          "ref": 5,
+          "sentence": "More recent evidence from a 12-month trial found that both approaches produced modest but comparable weight loss, with no superior metabolic advantage for intermittent fasting, reinforcing the view that adherence is the primary determinant of success [5].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Over 12 months, time-restricted eating plus calorie restriction gave no more weight loss or metabolic benefit than calorie restriction alone. Adherence as the main determinant is not in the abstract."
+        }
+      ]
+    },
+    {
+      "id": "p06",
+      "topic": "detecting hallucinations in the outputs of large language models",
+      "model": "deepseek-v4-pro",
+      "date": "2026-11-24",
+      "prompt": "I'm writing the literature review section of a paper on detecting hallucinations in the outputs of large language models. Write one paragraph of about 150 words that summarizes previous research, citing 5 papers with numbered citations like [1] and [2]. After the paragraph, write a line that says References, then the 5 references in APA 7th edition style, one per line, starting with [1], [2] and so on. Plain text only, no markdown.",
+      "text": "A substantial body of work has emerged to characterize and mitigate hallucinations in large language models (LLMs), reflecting the critical need for reliable model outputs. Early efforts focused on taxonomy and definition, distinguishing between input-conflicting and fact-conflicting hallucinations, which established a foundation for systematic study [1]. Building on this, researchers developed factuality metrics for abstractive summarization that assess the entailment of generated text against source documents, a concept later adapted for general language generation [2]. More recent approaches have shifted toward using LLMs themselves as evaluators, leveraging instruction-tuned models to identify self-consistency in sampled responses or to verify claims against retrieved evidence [3]. Concurrently, uncertainty-based methods have been proposed, where semantic entropy calculated across multiple generations serves as a proxy for the likelihood of confabulation without requiring external knowledge sources [4]. Empirical surveys further indicate that while retrieval-augmented generation reduces certain error types, fully eliminating hallucinations remains an open research challenge [5]. References\n[1] Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y., Madotto, A., & Fung, P. (2023). Survey of hallucination in natural language generation. ACM Computing Surveys, 55(12), 1–38.\n[2] Kryscinski, W., McCann, B., Xiong, C., & Socher, R. (2020). Evaluating the factual consistency of abstractive text summarization. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) (pp. 9332–9346). Association for Computational Linguistics.\n[3] Manakul, P., Liusie, A., & Gales, M. J. F. (2023). SelfCheckGPT: Zero-resource black-box hallucination detection for generative large language models. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (pp. 9004–9017). Association for Computational Linguistics.\n[4] Farquhar, S., Kossen, J., Kuhn, L., & Gal, Y. (2024). Detecting hallucinations in large language models using semantic entropy. Nature, 630(8017), 625–630.\n[5] Huang, L., Yu, W., Ma, W., Zhong, W., Feng, Z., Wang, H., Chen, Q., Peng, W., Feng, X., Qin, B., & Liu, T. (2025). A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions. ACM Transactions on Information Systems, 43(2), 1–55.",
+      "references": [
+        {
+          "n": 1,
+          "label": "real",
+          "record": "Ji et al. (2023), ACM Computing Surveys 55(12), 1-38, doi:10.1145/3571730",
+          "note": ""
+        },
+        {
+          "n": 2,
+          "label": "real",
+          "record": "Kryscinski et al. (2020), EMNLP 2020, 9332-9346, doi:10.18653/v1/2020.emnlp-main.750",
+          "note": ""
+        },
+        {
+          "n": 3,
+          "label": "real",
+          "record": "Manakul, Liusie & Gales (2023), EMNLP 2023, 9004-9017, doi:10.18653/v1/2023.emnlp-main.557",
+          "note": ""
+        },
+        {
+          "n": 4,
+          "label": "real",
+          "record": "Farquhar et al. (2024), Nature 630(8017), 625-630, doi:10.1038/s41586-024-07421-0",
+          "note": ""
+        },
+        {
+          "n": 5,
+          "label": "real",
+          "record": "Huang et al. (2025), ACM Transactions on Information Systems 43(2), 1-55, doi:10.1145/3703155",
+          "note": ""
+        }
+      ],
+      "citations": [
+        {
+          "ref": 1,
+          "sentence": "Early efforts focused on taxonomy and definition, distinguishing between input-conflicting and fact-conflicting hallucinations, which established a foundation for systematic study [1].",
+          "accept": [
+            "insufficient_evidence",
+            "not_supported",
+            "partially_supported"
+          ],
+          "why": "A broad survey of hallucination in language generation; input-conflicting and fact-conflicting hallucinations are not in the abstract."
+        },
+        {
+          "ref": 2,
+          "sentence": "Building on this, researchers developed factuality metrics for abstractive summarization that assess the entailment of generated text against source documents, a concept later adapted for general language generation [2].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "A model-based check of whether summaries are consistent with their source documents. Later use for general generation is not in the abstract."
+        },
+        {
+          "ref": 3,
+          "sentence": "More recent approaches have shifted toward using LLMs themselves as evaluators, leveraging instruction-tuned models to identify self-consistency in sampled responses or to verify claims against retrieved evidence [3].",
+          "accept": [
+            "partially_supported"
+          ],
+          "why": "SelfCheckGPT compares sampled responses for consistency, explicitly without an external database, so it does not check claims against retrieved evidence."
+        },
+        {
+          "ref": 4,
+          "sentence": "Concurrently, uncertainty-based methods have been proposed, where semantic entropy calculated across multiple generations serves as a proxy for the likelihood of confabulation without requiring external knowledge sources [4].",
+          "accept": [
+            "supported",
+            "partially_supported"
+          ],
+          "why": "Entropy computed over meanings detects confabulations without task-specific data."
+        },
+        {
+          "ref": 5,
+          "sentence": "Empirical surveys further indicate that while retrieval-augmented generation reduces certain error types, fully eliminating hallucinations remains an open research challenge [5].",
+          "accept": [
+            "partially_supported",
+            "supported"
+          ],
+          "why": "The survey discusses the limits of retrieval-augmented models and open research directions. It does not report that retrieval reduces some errors, and it is a survey, not an empirical study."
+        }
+      ]
+    }
+  ]
+}

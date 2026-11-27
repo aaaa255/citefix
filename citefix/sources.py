@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from .textutil import normalize
 
 USER_AGENT = "citefix-prototype/0.1 (research prototype)"
-TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10}
+TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10, "pubmed": 12}
 
 Years = tuple[int, int]  # inclusive range of publication years
 _TAGS = re.compile(r"<[^>]+>")
@@ -95,13 +95,14 @@ class _Gate:
 
 # Crossref's public pool allows 1 request per second, 1 at a time (its X-Rate-Limit headers say so).
 # CROSSREF_MAILTO moves requests to its "polite" pool; either way the pace follows those headers.
-# arXiv asks for 3 s between calls.
+# arXiv asks for 3 s between calls. NCBI (PubMed) allows 3 requests a second without a key.
 _CROSSREF_POLITE = bool(os.environ.get("CROSSREF_MAILTO"))
 _GATES = {
     "crossref": _Gate(1.05, 1),
     "openalex": _Gate(0.1, 4),
     "semantic_scholar": _Gate(1.1, 1),
     "arxiv": _Gate(3.0, 1),
+    "pubmed": _Gate(0.35, 1),
 }
 
 
@@ -327,6 +328,40 @@ def semantic_scholar(title: str) -> list[Candidate]:
             abstract=paper.get("abstract") or None,
         ))
     return [c for c in found if c.title]
+
+
+_EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+
+
+def _xml_text(element: ET.Element | None) -> str:
+    return " ".join("".join(element.itertext()).split()) if element is not None else ""
+
+
+def pubmed_abstract(doi: str) -> tuple[str, str] | None:
+    """The title and abstract PubMed holds for this DOI, or None. OpenAlex and Crossref lack the
+    abstracts of many publishers' papers that PubMed has, in medicine, psychology and the environment."""
+    query = {"db": "pubmed", "term": f"{doi}[doi]", "retmode": "json", "tool": "citefix"}
+    found = _json(_get(_EUTILS + "esearch.fcgi?" + urllib.parse.urlencode(query), "pubmed"))
+    ids = (found.get("esearchresult") or {}).get("idlist") or []
+    if not ids:
+        return None
+    query = {"db": "pubmed", "id": ids[0], "retmode": "xml", "tool": "citefix"}
+    body = _get(_EUTILS + "efetch.fcgi?" + urllib.parse.urlencode(query), "pubmed")
+    if not body:
+        return None
+    try:
+        article = ET.fromstring(body).find(".//Article")
+    except ET.ParseError as err:
+        raise SourceError("unreadable reply") from err
+    if article is None:
+        return None
+    parts = []
+    for part in article.findall("Abstract/AbstractText"):  # structured abstracts come in labelled parts
+        text = _xml_text(part)
+        if text:
+            parts.append(f"{part.get('Label')}: {text}" if part.get("Label") else text)
+    title = _xml_text(article.find("ArticleTitle"))
+    return (title, " ".join(parts)) if title and parts else None
 
 
 _ATOM = "{http://www.w3.org/2005/Atom}"

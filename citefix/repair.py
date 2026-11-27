@@ -4,6 +4,10 @@ The model decides what to search for and which paper to suggest, but it can only
 that its own searches returned, its quote must appear in that paper's abstract, and a separate
 judge call has to agree that the abstract supports the claim. Otherwise the suggestion goes back
 to the agent with the reason.
+
+A rewritten claim goes through the same checks: it must name the paper whose abstract supports it,
+either the paper already cited (then the sentence keeps its citation) or one from the searches
+(then that paper replaces the citation), and the judge must find the rewrite fully supported.
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ REPLACE = "replace"
 REVISE = "revise_claim"
 NONE_FOUND = "no_support_found"
 
+CITED = "C"  # the agent's id for the paper the sentence already cites
+
 MAX_TURNS = 10
 MAX_SEARCHES = 5
 MAX_REJECTIONS = 3
@@ -30,10 +36,10 @@ SYSTEM = """You help a student fix a citation. A sentence in their manuscript ci
 
 Rules:
 - Use search_papers to find papers. You may search up to 5 times, with different keywords each time.
-- You may only suggest a paper that search_papers returned, by its id (P1, P2, ...).
+- You may only suggest a paper that search_papers returned, by its id (P1, P2, ...), or the paper already cited, whose id is C when an index has it.
 - Prefer the paper that introduced the method or first reported the finding over later papers that use it.
 - Back the suggestion with one sentence copied word for word from that paper's abstract.
-- If what you find contradicts the claim, or nothing supports it, do not force a citation: submit "revise_claim" with a corrected claim, or "no_support_found".
+- If what you find contradicts the claim, or nothing supports it, do not force a citation: submit "revise_claim" with a corrected claim that says no more than one paper's abstract supports, and that paper's id, or "no_support_found". With C the sentence keeps its current citation; with a paper from your searches, that paper replaces it.
 - Finish by calling submit."""
 
 TOOLS = [
@@ -51,10 +57,12 @@ TOOLS = [
         "description": "Give the final answer.",
         "parameters": {"type": "object", "properties": {
             "decision": {"type": "string", "enum": [REPLACE, REVISE, NONE_FOUND]},
-            "paper_id": {"type": "string", "description": "Id of the suggested paper (for replace)."},
+            "paper_id": {"type": "string", "description": "Id of the paper the answer rests on: for replace, one "
+                         "that search_papers returned; for revise_claim, C or one that search_papers returned."},
             "quote": {"type": "string", "description": "Supporting sentence copied from that paper's abstract."},
             "explanation": {"type": "string", "description": "One or two sentences for the student."},
-            "revised_claim": {"type": "string", "description": "The corrected claim (for revise_claim)."},
+            "revised_claim": {"type": "string", "description": "The corrected claim (for revise_claim), saying no "
+                              "more than that paper's abstract supports."},
         }, "required": ["decision", "explanation"]},
     }},
 ]
@@ -75,27 +83,34 @@ class RepairResult:
     quote: str
     explanation: str
     revised_claim: str = ""
-    check: str | None = None  # the independent judge's verdict on the suggested paper
+    check: str | None = None  # the independent judge's verdict on the suggested paper or the rewrite
     steps: list[Step] = field(default_factory=list)
+    keeps_citation: bool = False  # a rewrite that the cited paper itself supports
 
 
 class Library:
-    """Papers the agent has been shown, under short ids, so it cannot suggest a paper it invented."""
+    """Papers the agent has been shown, under short ids, so it cannot suggest a paper it invented.
+    The paper already cited, when an index has it, is C, and keeps that id when a search finds it again."""
 
-    def __init__(self) -> None:
+    def __init__(self, cited: Candidate | None = None) -> None:
         self.papers: dict[str, Candidate] = {}
         self._by_title: dict[str, str] = {}
+        self._found = 0
+        if cited is not None:
+            self.add(cited, CITED)
 
-    def add(self, cand: Candidate) -> str:
+    def add(self, cand: Candidate, pid: str | None = None) -> str:
         key = normalize(cand.title)
-        pid = self._by_title.get(key)
-        if pid is None:
-            pid = f"P{len(self.papers) + 1}"
-            self._by_title[key] = pid
+        known = self._by_title.get(key)
+        if known is None:
+            if pid is None:
+                self._found += 1
+                pid = f"P{self._found}"
+            self._by_title[key] = known = pid
             self.papers[pid] = cand
-        elif cand.abstract and not self.papers[pid].abstract:
-            self.papers[pid] = cand
-        return pid
+        elif cand.abstract and not self.papers[known].abstract:
+            self.papers[known] = cand
+        return known
 
 
 def search(library: Library, query: str, years: sources.Years | None) -> tuple[list[dict], list[str]]:
@@ -143,35 +158,54 @@ def check_submission(args: dict, library: Library, claim: str) -> tuple[RepairRe
     """Accept the agent's answer only if it holds up; otherwise say what is wrong with it."""
     decision = args.get("decision")
     explanation = str(args.get("explanation") or "")
-    if decision == REPLACE:
-        paper = library.papers.get(str(args.get("paper_id") or ""))
-        if paper is None:
-            return None, "paper_id is not one of the ids that search_papers returned."
-        quote = str(args.get("quote") or "")
-        if not quote_in(quote, paper.abstract or ""):
-            return None, f"That quote is not in the abstract of {args.get('paper_id')}. Copy a sentence exactly."
-        verdict = judge_support(claim, paper.title, paper.abstract or "", paper.year)
-        if verdict.verdict not in (SUPPORTED, PARTIAL):
-            return None, f"An independent check found that {args.get('paper_id')} does not support the claim: {verdict.explanation}"
-        return RepairResult(REPLACE, paper, quote, explanation, check=verdict.verdict), ""
-    if decision == REVISE:
-        revised = str(args.get("revised_claim") or "").strip()
-        if not revised:
-            return None, "revise_claim needs a revised_claim."
-        paper = library.papers.get(str(args.get("paper_id") or ""))
-        quote = str(args.get("quote") or "")
-        if paper is not None and not quote_in(quote, paper.abstract or ""):
-            paper, quote = None, ""
-        return RepairResult(REVISE, paper, quote, explanation, revised), ""
     if decision == NONE_FOUND:
         return RepairResult(NONE_FOUND, None, "", explanation), ""
-    return None, "decision must be replace, revise_claim or no_support_found."
+    if decision not in (REPLACE, REVISE):
+        return None, "decision must be replace, revise_claim or no_support_found."
+    pid = str(args.get("paper_id") or "")
+    if decision == REPLACE and pid == CITED:
+        return None, "C is the paper already cited. To keep it, rewrite the claim to fit its abstract with revise_claim."
+    paper = library.papers.get(pid)
+    if paper is None:
+        allowed = "C or " if decision == REVISE and CITED in library.papers else ""
+        return None, f"paper_id must be {allowed}one of the ids that search_papers returned."
+    if not paper.abstract:
+        return None, f"{pid} has no abstract, so the answer cannot be checked against it."
+    quote = str(args.get("quote") or "")
+    if not quote_in(quote, paper.abstract):
+        return None, f"That quote is not in the abstract of {pid}. Copy a sentence exactly."
+    if decision == REPLACE:
+        verdict = judge_support(claim, paper.title, paper.abstract, paper.year)
+        if verdict.verdict not in (SUPPORTED, PARTIAL):
+            return None, f"An independent check found that {pid} does not support the claim: {verdict.explanation}"
+        return RepairResult(REPLACE, paper, quote, explanation, check=verdict.verdict), ""
+    revised = str(args.get("revised_claim") or "").strip()
+    if not revised:
+        return None, "revise_claim needs a revised_claim."
+    # The rewrite will carry this paper's citation, so this paper has to support all of it.
+    verdict = judge_support(revised, paper.title, paper.abstract, paper.year)
+    if verdict.verdict != SUPPORTED:
+        return None, (f"An independent check found that the abstract of {pid} does not fully support the corrected "
+                      f"claim: {verdict.explanation} Say no more than that abstract supports.")
+    return RepairResult(REVISE, paper, quote, explanation, revised, check=verdict.verdict,
+                        keeps_citation=pid == CITED), ""
+
+
+def _brief(claim: str, cited: str, cited_paper: Candidate | None, problem: str) -> str:
+    if cited_paper is None:
+        paper = "No index has the cited paper, so the sentence cannot keep its current citation."
+    else:
+        abstract = cited_paper.abstract[:1500] if cited_paper.abstract else "none available"
+        paper = f"The cited paper is C: {cited_paper.title} ({cited_paper.year or 'n.d.'}). Its abstract: {abstract}"
+    return f"Claim: {claim}\nCurrently cited: {cited}\n{paper}\nProblem: {problem}"
 
 
 def find_support(claim: str, cited: str, problem: str,
-                 on_step: Callable[[Step], None] | None = None) -> RepairResult:
-    """Run the agent. on_step, when given, is called with each step as it happens."""
-    library = Library()
+                 on_step: Callable[[Step], None] | None = None,
+                 cited_paper: Candidate | None = None) -> RepairResult:
+    """Run the agent. on_step, when given, is called with each step as it happens. cited_paper is the
+    index record of the cited reference, with its abstract, when the reference was found."""
+    library = Library(cited_paper)
     steps: list[Step] = []
     searches = rejections = 0
 
@@ -181,7 +215,7 @@ def find_support(claim: str, cited: str, problem: str,
             on_step(step)
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": f"Claim: {claim}\nCurrently cited: {cited}\nProblem: {problem}"},
+        {"role": "user", "content": _brief(claim, cited, cited_paper, problem)},
     ]
     for _ in range(MAX_TURNS):
         message, _finish = llm.chat(messages, model=llm.AGENT_MODEL, tools=TOOLS,
@@ -213,7 +247,7 @@ def find_support(claim: str, cited: str, problem: str,
             elif name == "submit":
                 outcome, objection = check_submission(args, library, claim)
                 if outcome is not None:
-                    shown = outcome.paper.title if outcome.paper else outcome.revised_claim or outcome.explanation
+                    shown = outcome.revised_claim or (outcome.paper.title if outcome.paper else outcome.explanation)
                     record(Step("submit", f"{outcome.decision}: {shown}"))
                     outcome.steps = steps
                     return outcome
