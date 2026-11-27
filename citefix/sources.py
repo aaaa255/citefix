@@ -20,7 +20,8 @@ from pathlib import Path
 from .textutil import normalize
 
 USER_AGENT = "citefix-prototype/0.1 (research prototype)"
-TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10, "pubmed": 12, "doi": 12}
+TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10, "pubmed": 12, "doi": 12,
+             "openlibrary": 15}
 
 Years = tuple[int, int]  # inclusive range of publication years
 _TAGS = re.compile(r"<[^>]+>")
@@ -108,6 +109,7 @@ _GATES = {
     "arxiv": _Gate(3.0, 1),
     "pubmed": _Gate(0.35, 1),
     "doi": _Gate(0.2, 2),
+    "openlibrary": _Gate(0.5, 2),  # no published limit; Open Library asks clients to keep the pace modest
 }
 
 
@@ -280,7 +282,8 @@ _CROSSREF_CONTAINERS = {
     "proceedings-series", "book-series", "book-set", "report-series", "grant", "peer-review",
 }
 _CROSSREF_VENUE_TYPES = {"journal-article": "journal", "proceedings-article": "conference",
-                         "posted-content": "repository"}
+                         "posted-content": "repository", "book": "book", "monograph": "book", "edited-book": "book",
+                         "reference-book": "book", "book-chapter": "chapter", "reference-entry": "chapter"}
 
 
 def _pages(first: str | None, last: str | None) -> str | None:
@@ -370,7 +373,11 @@ def _openalex_work(work: dict) -> Candidate | None:
         issue=biblio.get("issue"),
         pages=_pages(biblio.get("first_page"), biblio.get("last_page")),
     )
-    return cand if cand.title else None
+    # CHOICE Reviews (10.5860/choice...) are short reviews of books, filed under the book's own title: never what a
+    # reference cites, and they would stand in for the book.
+    if not cand.title or (cand.doi or "").lower().startswith("10.5860/choice"):
+        return None
+    return cand
 
 
 def openalex(query: str, years: Years | None = None, per_page: int = 5) -> list[Candidate]:
@@ -382,6 +389,41 @@ def openalex(query: str, years: Years | None = None, per_page: int = 5) -> list[
         params["filter"] = f"publication_year:{years[0]}-{years[1]}"
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode(_openalex_params(params))
     return [c for c in map(_openalex_work, _json(_get(url, "openalex")).get("results", [])) if c]
+
+
+_OPENLIBRARY_FIELDS = "key,title,subtitle,author_name,first_publish_year,publish_year,publisher"
+
+
+def _openlibrary_book(doc: dict, year: int | None) -> Candidate | None:
+    """One Open Library work. A book has editions; the one from the cited year stands for it when there is one,
+    so a 2018 second edition is not judged against the 1998 first."""
+    title = doc.get("title") or ""
+    if doc.get("subtitle") and normalize(doc["subtitle"]) not in normalize(title):
+        title = f"{title}: {doc['subtitle']}"
+    years = [y for y in doc.get("publish_year") or [] if isinstance(y, int)]
+    chosen = year if year in years else doc.get("first_publish_year")
+    if not title:
+        return None
+    return Candidate(source="openlibrary", title=title, year=chosen, authors=list(doc.get("author_name") or []),
+                     url=f"https://openlibrary.org{doc['key']}" if doc.get("key") else None,
+                     venue=(doc.get("publisher") or [None])[0], venue_type="book")
+
+
+def openlibrary(title: str, author: str | None = None, year: int | None = None) -> list[Candidate]:
+    """Books in Open Library (the Internet Archive's catalogue), by title and the first author's surname: the
+    textbooks and monographs that theses cite, many of them without a DOI and so missing from the other indexes."""
+    params = {"title": title, "limit": 5, "fields": _OPENLIBRARY_FIELDS}
+    if author:
+        params["author"] = author
+    body = _get("https://openlibrary.org/search.json?" + urllib.parse.urlencode(params), "openlibrary")
+    return [c for c in (_openlibrary_book(d, year) for d in _json(body).get("docs") or []) if c]
+
+
+def openlibrary_isbn(isbn: str, year: int | None = None) -> list[Candidate]:
+    """The book with this ISBN in Open Library, or nothing."""
+    body = _get("https://openlibrary.org/search.json?" + urllib.parse.urlencode(
+        {"q": f"isbn:{isbn}", "limit": 1, "fields": _OPENLIBRARY_FIELDS}), "openlibrary")
+    return [c for c in (_openlibrary_book(d, year) for d in _json(body).get("docs") or []) if c][:1]
 
 
 def openalex_by_numbers(year: int, volume: str, page: str) -> list[Candidate]:

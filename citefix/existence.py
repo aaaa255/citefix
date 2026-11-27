@@ -17,8 +17,8 @@ from functools import partial
 
 from . import llm, sources
 from .sources import Candidate
-from .textutil import (ParsedRef, normalize, parse_reference, partial_similarity, plausible_abstract, title_similarity,
-                       volume_and_page)
+from .textutil import (ParsedRef, looks_like_book, main_title, normalize, parse_reference, partial_similarity,
+                       plausible_abstract, title_similarity, volume_and_page)
 
 VERIFIED = "verified"
 SUSPICIOUS = "suspicious"
@@ -161,6 +161,11 @@ def score(ref: ParsedRef, cand: Candidate, named: bool = False) -> Scored:
                 value, via = loose, "text"
     else:
         value, via = partial_similarity(cand.title, ref.text), "text"
+    # A catalogue often keeps a book under its main title alone: "Computational electrodynamics" for "Computational
+    # Electrodynamics: The Finite-Difference Time-Domain Method". With the author confirmed, that is the book.
+    if (value < SAME_PAPER and cand.venue_type == "book" and author_ok and ref.title
+            and normalize(cand.title) == normalize(main_title(ref.title))):
+        value, via = SAME_PAPER, "title"
     if value < SAME_PAPER and _fields_agree(ref, cand):
         value, via = SAME_PAPER, "fields"
     return Scored(cand, value, via, year_ok, author_ok, doi_match)
@@ -191,6 +196,7 @@ def _ranking(ref: ParsedRef):
     """How decide() picks a record: the same paper first, then the version of it that the reference cites.
     A preprint and its published version share a title, and indexes list them in no fixed order."""
     wants_preprint = bool(_PREPRINT.search(ref.text))
+    book = looks_like_book(ref.text)
 
     def rank(s: Scored) -> tuple:
         same = s.score >= SAME_PAPER  # the version preferences only choose among records of the same paper
@@ -198,6 +204,8 @@ def _ranking(ref: ParsedRef):
                 same and s.doi_match is True,  # the version with the cited DOI
                 s.year_ok is not False,
                 s.author_ok is not False,
+                same and s.author_ok is True,  # a record that names the cited author over one with no authors
+                same and (s.cand.venue_type == "book") == book,  # a book for a book, not a chapter of its authors'
                 same and s.cand.year == ref.year,  # the version from the cited year
                 same and (s.cand.venue_type == "repository") == wants_preprint,  # a preprint only when one is cited
                 s.score)
@@ -227,6 +235,12 @@ def decide(ref: ParsedRef, scored: list[Scored], doi_state: str | None = None) -
         tail = f"; {wrong_doi}." if wrong_doi else "."
         return NOT_FOUND, "No index returned any record for this reference" + tail, None
     best = max(scored, key=_ranking(ref))
+    if best.score >= SAME_PAPER and best.year_ok is False and best.author_ok is False and best.doi_match is not True:
+        # Neither the year nor the author: most likely another work with the same title, which short titles often
+        # share ("机器学习"), and the cited one is in no index. Suspicious, not "not found": it may well exist.
+        others = ", ".join(best.cand.authors[:2]) or "other authors"
+        return (SUSPICIOUS, f"No index has this work as cited: the one record with this title is by {others} "
+                            f"({best.cand.year}, {best.cand.source}), probably another work with the same title.", best)
     if best.score >= SAME_PAPER:
         problems = [wrong_doi] if wrong_doi else []
         if best.year_ok is False:
@@ -301,8 +315,17 @@ def check_reference(raw: str, model: bool = False) -> ExistenceResult:
     arxiv_doi = f"10.48550/arXiv.{ref.arxiv_id}" if ref.arxiv_id else None
     if arxiv_doi and (ref.doi or "").lower() != arxiv_doi.lower():
         first.append(("openalex-arxiv", sources.openalex_doi, arxiv_doi, True))
-    for key in ref.other_ids:  # PubMed ids, an ACL Anthology address
-        first.append((f"openalex-{key.split(':')[0]}", sources.openalex_by_id, key, True))
+    for key in ref.other_ids:  # PubMed ids, an ACL Anthology address, an ISBN
+        if key.startswith("isbn:"):
+            first.append(("openlibrary-isbn", partial(sources.openlibrary_isbn, year=ref.year), key[5:], True))
+        else:
+            first.append((f"openalex-{key.split(':')[0]}", sources.openalex_by_id, key, True))
+    # A book: Open Library too, by the main title and the first author, from the start.
+    book = bool(ref.title) and looks_like_book(ref.text)
+    # Catalogues find a book by its main title and author; without an author the whole title is safer.
+    book_title = (main_title(ref.title) if ref.first_author else ref.title) if ref.title else None
+    if book:
+        first.append(("openlibrary", partial(sources.openlibrary, author=ref.first_author, year=ref.year), book_title))
     _run(ref, first, trace, scored)
     verdict, reason, match = decide(ref, scored)
 
@@ -326,6 +349,9 @@ def check_reference(raw: str, model: bool = False) -> ExistenceResult:
         numbers = volume_and_page(ref.text) if ref.year and not ref.title else None
         if numbers:
             second.append(("openalex-numbers", partial(sources.openalex_by_numbers, ref.year, numbers[0]), numbers[1]))
+        if ref.title and not book:  # perhaps a book after all, written without a publisher
+            second.append(("openlibrary", partial(sources.openlibrary, author=ref.first_author, year=ref.year),
+                           book_title))
         if second:
             _run(ref, second, trace, scored)
             verdict, reason, match = decide(ref, scored)
@@ -441,8 +467,8 @@ def _pubmed(doi: str, title: str, trace: list[Lookup]) -> str | None:
 def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Lookup]) -> tuple[str | None, str | None]:
     """The matched paper's abstract, from whichever index has one, then from PubMed by DOI;
     arXiv by title as a last resort."""
-    if not match or match.score < SAME_PAPER:
-        return None, None
+    if not match or match.score < SAME_PAPER or match.cand.source == "openlibrary":
+        return None, None  # a catalogue's book has no abstract to find
     year = match.cand.year
     versions = [s for s in (match, *scored) if s.score >= SAME_PAPER
                 and (year is None or s.cand.year is None or abs(s.cand.year - year) <= 1)]

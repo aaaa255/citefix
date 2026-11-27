@@ -302,6 +302,8 @@ python -m unittest discover -s tests
 
 **真实论文的参考文献列表。** 出版社会把论文的参考文献交给 Crossref，有些连同印出来的原文和每条对应的 DOI 一起交。取了 2024 到 2026 年 12 篇论文的 182 条：Scientific Reports、Humanities and Social Sciences Communications、物理学报、Sustainability、ACM Computing Surveys 和 Journal of Economic Perspectives，同样去掉 DOI（`eval/data/real_refs.jsonl`，生成脚本 `eval/make_real_refs.py`，评测 `python eval/run_real_refs.py`）。第一次找对 142 条。物理学报的格式不写标题（"Alicki R, Fannes M 2013 Phys. Rev. E 87 042123"），而 Crossref 把 Physical Review 的页码存在"文章编号"里，citefix 没读。现在这种文献会按年份、卷号和起始页去 OpenAlex 查，年份取作者后面那个，不再取后面像年份的页码；先在线发表、一两年后才印进期刊的论文，按印刷年份引用也不再判可疑。改之后 182 条找对 166 条。认成"另一篇"的 7 条里，有 5 条其实是 citefix 对、出版社交的 DOI 错（一个 DOI 多了一位数字；两条物理文献写的卷号和页码，正是 citefix 找到的那篇）；1 条是问卷的数据库记录和介绍它的论文之争；1 条引的是一本书，citefix 匹配成了同一批作者的一章。其余没找到的，多半是出版社把两条文献切错了位置。第 1 步的测试集、两组段落和开发者自己的列表结论都没有变。
 
+**图书（11 月 27 日）。** 学位论文常引的 14 本教材和专著，分属几个领域，其中 2 本中文书（`eval/data/books_sample.jsonl`，评测 `python eval/run_books.py`）。改之前只找对 6 本：很多书没有 DOI；引的是新版就写新版的年份（Sutton 和 Barto 的第 2 版是 2018 年，却拿去和 1998 年的第 1 版比）；索引里有时只有这本书的书评（CHOICE Reviews），或者同一批作者写的某一章。现在还会去 Open Library 按主书名和第一作者查书（有 ISBN 就按 ISBN 查），版本按引用的年份取；看起来是书的文献，优先认书而不是章节；去掉 CHOICE 书评。书名相同但作者和年份都对不上的，会说明"很可能是同名的另一本书"。改之后 14 本找对 12 本。两本中文书哪个免费索引都没有：Open Library 没收录，美国国会图书馆和 Google Books 不带密钥都拒绝自动查询。其他测试集的结论都没变。另外量了让大模型读规则读不了的文献：不规范的 APA 文献从找到 77 条到 93 条（共 95 条，没有标点的 19 条从 4 条到 19 条）；在真实论文的参考文献上没有变化，因为那里剩下的是出版社切错的文本，不是写法不规范。
+
 ## 计划
 
 - [x] 第 1 步：文献是否存在
