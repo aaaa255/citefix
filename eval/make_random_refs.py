@@ -34,11 +34,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "eval"))
 
-from citefix.textutil import normalize, parse_reference, title_similarity  # noqa: E402
+from citefix.textutil import extract_doi, normalize, parse_reference, title_similarity  # noqa: E402
 from make_styles_sample import strip_identifiers  # noqa: E402
 
 UA = {"User-Agent": "citefix-eval/0.1"}
-_DOI = re.compile(r"\b10\.\d{4,9}/[^\s,;<>\"]+")
 
 
 def get(url: str) -> dict | None:
@@ -151,7 +150,7 @@ def main() -> int:
             with_doi, without_doi = [], []
             for ref in printed_refs:
                 text = printed(ref["unstructured"])
-                doi = ref.get("DOI") or (_DOI.search(text).group(0).rstrip(".") if _DOI.search(text) else None)
+                doi = ref.get("DOI") or extract_doi(text)  # as printed, without the "]" or "." after it
                 reference = strip_identifiers(text)
                 if len(reference) < 25:
                     continue

@@ -180,6 +180,92 @@ class StylesTest(unittest.TestCase):
         self.assertEqual(len(join_wrapped(lines)), 2)
 
 
+class HouseStylesTest(unittest.TestCase):
+    """Styles from papers drawn at random (eval/data/random_refs.jsonl): (reference, title, first author, year)."""
+
+    CASES = [
+        # GOST 7.0.5, Russian journals, in Latin and in Cyrillic letters
+        ("Shi Z., Fu X., Li X. et al. EVSSE: enabling efficient, secure, verifiable searchable symmetric encryption "
+         "// IEEE Transactions on Knowledge and Data Engineering. 2020. Vol. 32(1). P. 1–14.",
+         "EVSSE: enabling efficient, secure, verifiable searchable symmetric encryption", "Shi", 2020),
+        ("Иванов И. И., Петров П. П. Методы анализа данных // Вестник НГУ. 2020. Т. 18, № 2. С. 5–15.",
+         "Методы анализа данных", None, 2020),
+        # French quotes
+        ("Pepin M., « Enterprise education : a Deweyan perspective », Education + Training, no 8-9, vol. 54, 2012, "
+         "p. 801-812.", "Enterprise education : a Deweyan perspective", "Pepin", 2012),
+        # AMS, mathematics
+        ("Zemin Jin and Xueliang Li, Graphs with the second largest number of maximal independent sets, Discr. Math. "
+         "308 (2008), 5864–5870.", "Graphs with the second largest number of maximal independent sets", "Jin", 2008),
+        ("Herbert S. Wilf, The number of maximal independent sets in a tree, SIAM J. Alg. Discr. Meth. 7 (1986), "
+         "125–130.", "The number of maximal independent sets in a tree", "Wilf", 1986),
+        # EndNote's numbered style; the volume and page after the year are not a title
+        ("Ciccia, A. and S.J. Elledge, The DNA damage response: making it safe to play with knives. Mol Cell, 2010. "
+         "40(2): p. 179-204.", "The DNA damage response: making it safe to play with knives", "Ciccia", 2010),
+        ("Simon, G.R., et al., ERCC1 expression is a predictor of survival in resected patients with non-small cell "
+         "lung cancer. 2005. 127(3): p. 978-983.",
+         "ERCC1 expression is a predictor of survival in resected patients with non-small cell lung cancer", "Simon", 2005),
+        # JMIR: no commas between the authors
+        ("Chen H Fang Z Singla Y Dredze M. Benchmarking large language models on answering and explaining challenging "
+         "medical questions. Presented at: NAACL 2025; Apr 29-May 4, 2025.",
+         "Benchmarking large language models on answering and explaining challenging medical questions", "Chen", 2025),
+        # initials without stops, then the year
+        ("Keshri, AK, Shukla, A, Gupta, RP 2009. ASTER ratio indices for supraglacial terrain mapping. International "
+         "Journal of Remote Sensing 30, 519–524.", "ASTER ratio indices for supraglacial terrain mapping", "Keshri", 2009),
+        # Vancouver with a comma after the last name and no space after the title
+        ("Bøgehøj M, Emmeluth C, Overgaard S, Blood flow and microdialysis in the human femoral head.Acta Orthop "
+         "2007;78(1):56-62", "Blood flow and microdialysis in the human femoral head", "Bøgehøj", 2007),
+        # hyphenated initials; two initials are not a full name
+        ("Devlin J, Chang M-W, Lee K, Toutanova K. BERT: Pre-training of Deep Bidirectional Transformers for Language "
+         "Understanding. Proceedings of NAACL-HLT 2019.",
+         "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding", "Devlin", 2019),
+        ("Sievers HH, Weyand M, Kraatz EG, Bernhard A. An alternative technique for orthotopic cardiac transplantation, "
+         "with preservation of the normal anatomy of the right atrium. Thorac Cardiovasc Surg. 1991;39:70-72.",
+         "An alternative technique for orthotopic cardiac transplantation, with preservation of the normal anatomy of "
+         "the right atrium", "Sievers", 1991),
+        # quotes inside a title; "No." and "15,000" inside one; "et al." in Spanish; names after a lower-case one
+        ("Cameron KA, Roloff ME, Hauber S et al (2013) Patient knowledge and recall of health information following "
+         "exposure to “facts and myths” message format variations. Patient Educ Couns 92:381–387",
+         "Patient knowledge and recall of health information following exposure to “facts and myths” message format "
+         "variations", "Cameron", 2013),
+        ("Leduc D, Senikas V, Lalonde AB. No. 235-Active Management of the Third Stage of Labour. J Obstet Gynaecol "
+         "Can. 2018;40(12):e841-e855.", "No. 235-Active Management of the Third Stage of Labour", "Leduc", 2018),
+        ("Kirklin JK, Naftel DC, Pagani FD, et al. Seventh INTERMACS annual report: 15,000 patients and counting. "
+         "J Heart Lung Transplant. 2015;34:1495-1504.", "Seventh INTERMACS annual report: 15,000 patients and counting",
+         "Kirklin", 2015),
+        ("Bradbury BD, Fissell RB, Albert JM y col. Predictors of early mortality among incident US hemodialysis "
+         "patients. Clin J Am Soc Nephrol. 2007;2(1):89-99.",
+         "Predictors of early mortality among incident US hemodialysis patients", "Bradbury", 2007),
+        ("Ford CE, jones KW, Polani PE, et al. A sex-chromosome anomaly in a case of gonadal dysgenesis (Turner’s "
+         "syndrome). Lancet. 1959;273(7075):711-713.",
+         "A sex-chromosome anomaly in a case of gonadal dysgenesis (Turner’s syndrome)", "Ford", 1959),
+        # names: a particle with a hyphen, a Russian two-letter initial (and no title, so none is read)
+        ("Abd el-Kader AI, Gonied AS, Mohamed ML. Risk factors for endometriosis among Egyptian infertile women. "
+         "SAGE Open Med. 2022;10.", "Risk factors for endometriosis among Egyptian infertile women", "Abd el-Kader", 2022),
+        ("I. Ya. Aref’eva, Phys. Part. Nucl. 52, 512 (2021).", None, "Aref’eva", 2021),
+        ("Camps-Valls, G 2009. Machine learning in remote sensing data processing, 2009 IEEE International Workshop "
+         "on Machine Learning for Signal Processing, Grenoble, France.", "Machine learning in remote sensing data "
+         "processing", "Camps-Valls", 2009),
+    ]
+
+    def test_each_style(self):
+        for raw, title, author, year in self.CASES:
+            with self.subTest(raw[:50]):
+                ref = parse_reference(raw)
+                self.assertEqual((ref.title, ref.first_author, ref.year), (title, author, year))
+
+    def test_a_long_author_list_is_read_quickly(self):
+        # A pattern that could split a list of names in many ways took seconds on 20 names, and minutes on 29.
+        import time
+        names = ", ".join(f"{c}. {name}" for c, name in zip("CYXLJYLGJXZTJYWXWHMYHLJGRZQJB", (
+            "Huang Wang Li Ren Zhao Hu Zhang Fan Xu Gu Cheng Yu Xia Wei Wu Xie Yin Li Liu Xiao Gao Guo Xie Wang Jiang "
+            "Gao Jin Wang Cao").split()))
+        started = time.monotonic()
+        ref = parse_reference(f"{names}, Clinical features of patients infected with 2019 novel coronavirus in Wuhan, "
+                              "China. The Lancet 395, 497–506 (2020).")
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(ref.first_author, "Huang")
+
+
 class OtherIdsTest(unittest.TestCase):
     def test_pubmed_ids_and_acl_anthology(self):
         ref = parse_reference("Polack FP, et al. Safety and efficacy. N Engl J Med. 2020;383(27):2603-15. "

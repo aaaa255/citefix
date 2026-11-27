@@ -46,8 +46,10 @@ def main() -> int:
     results = check_many([r["reference"] for r in rows], workers=3, **({"model": True} if args.model else {}))
     for r, result in zip(rows, results):
         cand = result.match.cand if result.match else None
+        # The DOI, the arXiv id that DOI is made of (10.48550/arxiv.<id>), or the title of that DOI's paper.
+        held = {(cand.doi or "").lower(), f"10.48550/arxiv.{cand.arxiv_id}".lower() if cand.arxiv_id else ""} if cand else set()
         same = cand is not None and r["doi"] is not None and (
-            (cand.doi or "").lower() == r["doi"] or bool(r["title"]) and title_similarity(cand.title, r["title"]) >= 0.9)
+            r["doi"] in held or bool(r["title"]) and title_similarity(cand.title, r["title"]) >= 0.9)
         r.update(verdict=result.verdict, reason=result.reason, matched=cand.title if cand else None,
                  matched_doi=cand.doi if cand else None, matched_source=cand.source if cand else None,
                  right=result.verdict == VERIFIED and same,
