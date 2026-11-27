@@ -1,5 +1,6 @@
 """Offline tests of how candidate records are scored and judged (no network)."""
 
+import dataclasses
 import unittest
 from unittest import mock
 
@@ -303,8 +304,9 @@ class MixedDetailsTest(unittest.TestCase):
         self.assertEqual(decide(ref, [score(ref, ASHWAL)])[0], VERIFIED)
 
     def test_a_short_misread_title_does_not_count_as_another(self):
-        ref = parse_reference("I. Aref’eva, K. Rannu, and P. Slepov, Phys. Lett. B 792, 470 (2019).")
-        self.assertEqual(ref.title, "Phys")  # the journal's name, taken for the title
+        # The parser can take a journal's name for the title; a few words are not another paper's title.
+        ref = dataclasses.replace(parse_reference("I. Aref’eva, K. Rannu, and P. Slepov, Phys. Lett. B 792, 470 "
+                                                  "(2019)."), title="Phys")
         record = Candidate("crossref", "Orientation dependence of confinement-deconfinement phase transition in "
                            "anisotropic media", 2019, ["Irina Aref’eva", "Kristina Rannu", "Pavel Slepov"],
                            volume="792", pages="470-475")

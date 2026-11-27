@@ -17,21 +17,63 @@ _NUMBERING = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
 # Generative agents: ..."), surname and initials (Vancouver and AMA: "LeCun Y, Bengio Y, Hinton G. Deep
 # learning."; Nature and ACS: "LeCun, Y., Bengio, Y. & Hinton, G. Deep learning."), initials and surname
 # (Science: "Y. LeCun, Y. Bengio, G. Hinton, Deep learning.") or Chinese names ("周志华. 机器学习. ...").
+# Also French quotes (« »), GOST's "Title // Journal", AMS's "Names, Title, Journal Vol (Year)", EndNote's numbered
+# "Surname, I., et al., Title.", and Vancouver lists without commas (JMIR) or with one after the last name.
 _UP = "[A-ZÀ-ÖØ-ÞĀ-ſ]"  # a capital, accented ones too ("Ö." in "Türeci, Ö.", "Ł" in "Łukasz")
-# A surname may open with a lower-case particle: "de Man, F. M.", "van Schaik R", "van der Maaten, L."
+# Russian names transliterated keep two-letter initials: "I. Ya. Aref'eva", "Yu. A. Kravtsov".
+_RU_INITIAL = r"(?:Ya|Yu|Ye|Yo|Zh|Kh|Ch|Sh|Ts)"
+# A surname may open with a lower-case particle: "de Man, F. M.", "van Schaik R", "van der Maaten, L.",
+# "Abd el-Kader AI".
 _PARTICLE = r"(?:(?:van|von|de|da|di|du|del|della|den|der|le|la|ten|ter|dos|das)\s+)"
-_NAME_WORD = rf"{_PARTICLE}*{_UP}[\w'’-]+"
-_INITIALS = rf"(?:{_UP}\.\s?-?\s?)+"
-_TITLE = r"(.+?(?:[.?!](?=[\s,]|$)|$))"  # up to the end of its sentence, or of the reference
+_NAME_WORD = rf"{_PARTICLE}*(?:(?:el|al|ad|ul|abu|ibn|bin)-)?{_UP}[\w'’-]+"
+_INITIALS = rf"(?:(?:{_UP}|{_RU_INITIAL})\.\s?-?\s?)+"
+# Vancouver's initials, without stops: "Y", "JS", "M-W" (Ming-Wei), and transliterated Russian ones: "GEh".
+_BARE_INITIALS = rf"(?:{_UP}(?:h(?![a-z]))?){{1,3}}(?:-{_UP}{{1,2}})?"
+# "et al." in other languages: Spanish "y col.", French "et coll.", Italian "e coll.", German "u. a.".
+_ET_AL = r"(?:et\s+al|y\s+cols?|et\s+coll|e\s+coll|u\.\s?a)"
+# Up to the end of its sentence, or of the reference. "No." does not end one: "No. 235-Active Management ...".
+_TITLE = r"(.+?(?:(?<!\bNo)(?<!\bno)[.?!](?=[\s,]|$)|$))"
 _QUOTED_TITLE = re.compile(r"[\"“”](\S.+?)[,.]?[\"“”]")  # not from a stray closing quote: `Topic." Journal ...`
 _SINGLE_QUOTED_TITLE = re.compile(r"‘(.+?)[,.]?’(?=[\s,.:;]|$)")  # the ’ of "Don’t" does not end it
+_GUILLEMET_TITLE = re.compile(r"«\s*(\S.+?)\s*[,.]?\s*»")  # French: Pepin M., « L’entrepreneuriat ... », Revue ...
 _APA_TITLE = re.compile(r"\((?:19|20)\d{2}[a-z]?(?:,[^)]*)?\)[.:]?\s+" + _TITLE)
-_ACM_TITLE = re.compile(r"(?:^|[.,]\s)(?:19|20)\d{2}[a-z]?\.\s+(.+?[.?!])(?=\s|$)")
+# ACM's "Author. 2017. Title." and "Keshri, AK, Shukla, A 2009. Title." (initials without stops, then the year).
+_ACM_TITLE = re.compile(r"(?:^|[.,]\s|(?<=[A-Z])\s)(?:19|20)\d{2}[a-z]?\.\s+(.+?[.?!])(?=\s|$)")
 _GBT_TITLE = re.compile(r"[.．]\s*([^.．\[\]]+?)\s*\[(?:J|M|C|D|R|S|N|P|Z|A|G|K|EB|DB|CP)(?:/OL)?\]")
+# GOST 7.0.5 (Russian journals): "Shi Z., Fu X., Li X. et al. EVSSE: enabling ... encryption // IEEE Trans. ..."
+_UP_CYRILLIC = "[A-ZÀ-ÖØ-ÞĀ-ſА-ЯЁ]"
+# In the name patterns below each initial takes its space one way only: with two ways, a long author list that
+# does not match would take exponential time to fail.
+_GOST_NAME = rf"{_UP_CYRILLIC}[\w'’-]+(?:\s{_UP_CYRILLIC}[\w'’-]+)?\s(?:(?:{_UP_CYRILLIC}|{_RU_INITIAL})\.\s?){{1,3}}"
+_GOST_TITLE = re.compile(rf"^(?:{_GOST_NAME},\s)*{_GOST_NAME}\s*(?:et\s+al\.\s*|и\s+др\.\s*)?"
+                         r"(\S.+?)\s*(?:\[[^\[\]]{1,30}\])?\s*//\s")
+# AMS (mathematics): "Zemin Jin and Xueliang Li, Graphs with ..., Discr. Math. 308 (2008), 5864–5870." The title runs
+# from the names to the journal, its volume and year.
+_GIVEN = rf"{_UP}[\w'’]+(?:-{_UP}?[\w'’]+)?"
+_AMS_NAME = rf"(?:(?:{_UP}\.-?\s?){{1,3}}|{_GIVEN}\s+(?:{_UP}\.\s+)?)(?:{_GIVEN}\s+)?{_PARTICLE}*{_UP}[\w'’-]+"
+_AMS_TITLE = re.compile(rf"^{_AMS_NAME}(?:(?:,\s+and\s+|,\s+|\s+and\s+){_AMS_NAME})*,\s+(?:eds?\.,\s+)?"
+                        r"(\S.+?),\s+(?:in:?\s+)?[^,]+?\s\d+\s\((?:19|20)\d{2}\)")
 # Lists of authors in the styles above, each followed by the title (the group the pattern captures).
-_SURNAME_INITIALS_LIST = re.compile(  # Vancouver, AMA: "LeCun Y, Bengio Y, Hinton G." or "..., et al."
-    rf"^(?:{_NAME_WORD}(?:\s{_NAME_WORD})?\s{_UP}{{1,3}},\s)*{_NAME_WORD}(?:\s{_NAME_WORD})?\s{_UP}{{1,3}}"
-    r"(?:,?\s+et\s+al)?\.\s+" + _TITLE)
+_SURNAME_INITIALS_LIST = re.compile(  # Vancouver, AMA: "LeCun Y, Bengio Y, Hinton G." or "..., et al."; JMIR leaves
+    # out the commas: "Chen H Fang Z Singla Y Dredze M."
+    rf"^(?:{_NAME_WORD}(?:\s{_NAME_WORD})?\s{_BARE_INITIALS}\.?(?:,\s|\s))*{_NAME_WORD}(?:\s{_NAME_WORD})?"
+    rf"\s{_BARE_INITIALS}(?:,?\s+{_ET_AL}\.\s*|\.\s+)(?=[^\W_])" + _TITLE)
+# A journal's abbreviated name ("Phys", "EPJ Web Conf") and what follows it: more of it, then the volume
+# ("Part. Nucl. 52, 512", " 191, 5010").
+_ABBREVIATED = re.compile(r"[A-Z][A-Za-z]{0,4}(?:\s[A-Z][A-Za-z]{0,4}){0,2}")
+_JOURNAL_GOES_ON = re.compile(r"\s*(?:[A-Z][\w-]*[.,]?\s+){0,4}[A-Z]?\s?\d+\s*[,:(]")
+# Names, then "et al." and the title, whatever the names look like: "Ford CE, jones KW, Polani PE, et al. A sex-..."
+_AFTER_ET_AL = re.compile(rf"^(.{{3,300}}?),?\s+{_ET_AL}\.\s+(?=[^\W_])" + _TITLE)
+# Vancouver with a comma after the last name and no space after the title's stop:
+# "Bøgehøj M, Emmeluth C, Overgaard S, Blood flow and microdialysis in the human femoral head.Acta Orthop 2007;78".
+_SURNAME_INITIALS_COMMA = re.compile(
+    rf"^(?:{_NAME_WORD}(?:\s{_NAME_WORD})?\s{_BARE_INITIALS},\s)+(?!{_NAME_WORD}(?:\s{_NAME_WORD})?\s{_BARE_INITIALS}[\s,.])"
+    rf"((?:\S+\s+){{2,}}?\S+?)\.(?=\s?{_UP}[\w-]*[\s.])")
+# EndNote's numbered style: the first author inverted, the others not, then the title after a comma:
+# "Abdel-Rahman, L.H., et al., Synthesis ...", "Ciccia, A. and S.J. Elledge, The DNA damage response: ...".
+_ENDNOTE_LIST = re.compile(
+    rf"^{_NAME_WORD}(?:\s{_NAME_WORD})?,\s(?:{_UP}\.-?\s?)+?,?\s(?:Jr\.,\s)?"
+    rf"(?:et\s+al\.,\s+|(?:(?:and\s+)?(?:{_UP}\.-?\s?)+{_NAME_WORD},\s+)+)(?=[A-Z0-9])" + _TITLE)
 _SURNAME_COMMA_INITIALS_LIST = re.compile(  # Nature, ACS, APA without a year: "LeCun, Y., Bengio, Y. & Hinton, G."
     rf"^(?:{_NAME_WORD}(?:\s{_NAME_WORD})?,\s{_INITIALS}(?:,\s|;\s|,?\s(?:&|and)\s)?)+"
     r"(?:et\s+al\.\s+)?(?=[A-Z0-9])" + _TITLE)
@@ -40,12 +82,14 @@ _INITIALS_SURNAME_LIST = re.compile(  # Science, AIP, IEEE without quotes: "Y. L
 _SURNAME_GIVEN_LIST = re.compile(  # MLA books: "Hastie, Trevor, et al. The Elements of Statistical Learning."
     rf"^{_NAME_WORD},\s{_NAME_WORD}(?:\s(?:{_NAME_WORD}|{_UP}\.))*"
     rf"(?:,\s+et\s+al|,?\s+and\s+{_NAME_WORD}(?:\s(?:{_NAME_WORD}|{_UP}\.))*)?\.\s+(?=[A-Z0-9])" + _TITLE)
-# A venue, volume and pages, not a title: "Nature 521, 436 (2015)" in styles that leave the title out.
-_VENUE_NUMBERS = re.compile(r"\b\d+\s*[,:]\s*\d+|\((?:19|20)\d{2}\)")
-# What styles add after a title: "(Version 7)", "[Internet]", a book's "(Springer New York, 2009)", or the
-# translation of a title in another language: "Update Chemoperfusion [Update on chemoinfusion]".
+# A venue, volume and pages, not a title: "Nature 521, 436 (2015)" in styles that leave the title out. A number
+# like "15,000" in a title is not one ("Seventh INTERMACS annual report: 15,000 patients and counting").
+_VENUE_NUMBERS = re.compile(r"\b\d+\s*(?::|,(?!\d{3}(?!\d)))\s*\d+|\((?:19|20)\d{2}\)")
+# What styles add after a title: "(Version 7)", "[Internet]", a book's "(Springer New York, 2009)", an edition
+# (", 19e"), or the translation of a title in another language: "Update Chemoperfusion [Update on chemoinfusion]".
 _TITLE_TAIL = re.compile(r"\s*(?:[\[(](?:version\s*\d+|v\d+|internet|online|preprint|e-?print|pdf"
                          r"|\d+(?:st|nd|rd|th)\s+ed(?:\.|ition)?)[\])]"
+                         r"|,\s*\d{1,2}e"
                          r"|\([^()]*\b(?:19|20)\d{2}\)|\[[^\[\]]{3,}\])\s*$", re.IGNORECASE)
 # Signs that a reference is a book: GB/T's [M], a publisher, an edition, an ISBN.
 _BOOK = re.compile(r"\[M(?:/OL)?\]|出版社|\bISBN\b|\b\d+(?:st|nd|rd|th)\s+[Ee]d(?:\.|ition)|\b(?:Press|Publishers?|Publishing"
@@ -63,18 +107,20 @@ _VOLUME_PAGE = re.compile(r"(?<!\d)(\d{1,4})\s*(?:\(\d{1,4}\))?\s*[,:]?\s+(?:pp?
                           r"(?:\s*[-–]\s*\d+)?\s*(?:\((?:19|20)\d{2}\))?\s*\.?$")
 _BIBTEX_FIELD = r"\b{}\s*=\s*(?:\{{((?:[^{{}}]|\{{[^{{}}]*\}})*)\}}|\"([^\"]*)\"|(\d+))"
 # A reference that opens with a full name: "Joon Sung Park,", "Theodore R. Sumers,", "Takuma Yoneda et al." or a
-# Chinese name. (APA's "Vaswani, A." and GB/T's "He K," are not full names.)
-_OPENS_WITH_FULL_NAME = re.compile(rf"^(?:{_NAME_WORD}\s+(?:{_NAME_WORD}\s+|{_UP}\.\s*){{0,2}}{_NAME_WORD}"
+# Chinese name. (APA's "Vaswani, A." and GB/T's "He K," are not full names, nor is Vancouver's "Sievers HH,".)
+_OPENS_WITH_FULL_NAME = re.compile(rf"^(?:{_NAME_WORD}\s+(?:{_NAME_WORD}\s+|{_UP}\.\s*){{0,2}}"
+                                   rf"(?!{_BARE_INITIALS}\b){_NAME_WORD}"
                                    r"\s*(?:,|\s+et\s+al\b|\s+and\b|\s*&)|[一-鿿]{2,4}\s*[,，、.．])")
-# "C." in "Joseph C. O'Brien", "M.-W." in "M.-W. Chang", "J." and "S." in "Park, J.S."
-_INITIAL = re.compile(rf"(?<![\w'’]){_UP}\.(?=[\s,;-]|{_UP}|$)")
+# "C." in "Joseph C. O'Brien", "M.-W." in "M.-W. Chang", "J." and "S." in "Park, J.S.", "Ya." in "I. Ya. Aref'eva"
+_INITIAL = re.compile(rf"(?<![\w'’])(?:{_UP}|{_RU_INITIAL})\.(?=[\s,;-]|{_UP}|$)")
 # A list number with neither brackets nor a stop, as AIP writes it: "1 Y. LeCun, ...".
 _BARE_NUMBER = re.compile(rf"^\d{{1,3}}\s+(?={_UP})")
 # A note's date is not the publication year: "Accessed 12 March 2026."
 _NOTE_DATE = re.compile(r"\b(?:accessed|retrieved|viewed|visited|cited|downloaded)\b[^.]*", re.IGNORECASE)
-_SENTENCE_END = re.compile(r"[.．。!?](?=\s|$)")
-# Not a title: what some styles write after the year, such as a DOI or a link.
-_NOT_A_TITLE = re.compile(r"^(?:doi\b|arxiv\b|https?:|www\.|url\b|available\b|retrieved\b|accessed\b)", re.IGNORECASE)
+_SENTENCE_END = re.compile(r"(?<!\bNo)(?<!\bno)[.．。!?](?=\s|$)")
+# Not a title: what some styles write after the year, such as a DOI or a link, or a volume and page ("127(3): p.").
+_NOT_A_TITLE = re.compile(r"^(?:doi\b|arxiv\b|https?:|www\.|url\b|available\b|retrieved\b|accessed\b"
+                          r"|\d+\s*\([^()]*\)\s*:|\d+\s*:\s*pp?\b)", re.IGNORECASE)
 # An arXiv identifier, new style (2304.03442) or old (hep-th/9901001), with or without its version.
 _ARXIV_ID = re.compile(r"(?:arXiv:\s?|arxiv\.org/(?:abs|pdf)/|10\.48550/arXiv\.)"
                        r"(\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?", re.IGNORECASE)
@@ -93,13 +139,15 @@ _ANY_YEAR = re.compile(r"(?<![\d–—-])((?:19|20)\d{2})[a-z]?(?![\d–—-]|\.
 _DOI = re.compile(r"\b10\.\d{4,9}/\S+")
 
 _SURNAME_FIRST = re.compile(rf"^({_NAME_WORD}(?:\s+{_NAME_WORD})?)\s*,")  # "Vaswani, A." / "Ashish Vaswani,"
-_INITIALS_FIRST = re.compile(rf"^(?:{_UP}\.\s*-?\s*)+({_NAME_WORD})")  # "K. He," / "M.-W. Chang"
+_INITIALS_FIRST = re.compile(rf"^(?:(?:{_UP}|{_RU_INITIAL})\.\s*-?\s*)+({_NAME_WORD})")  # "K. He," / "M.-W. Chang"
 # "Joon Sung Park,", "Theodore R. Sumers,", "Takuma Yoneda et al.", and alone before an ACM year:
 # "Albert Bandura. 1977.": given names or initials, then the surname.
-_FULL_NAME_FIRST = re.compile(rf"^(?:{_NAME_WORD}\s+|{_UP}\.\s*){{1,3}}({_NAME_WORD})"
+_FULL_NAME_FIRST = re.compile(rf"^(?:{_NAME_WORD}\s+|{_UP}\.\s*){{1,3}}(?!{_BARE_INITIALS}\b)({_NAME_WORD})"
                               r"\s*(?:,|\s+et\s+al\b|\s+and\b|\s*&|\.\s+(?=(?:19|20)\d{2}\b))")
-# "He K, Zhang X", "PARK J S,", and alone before a physics-style year: "Namiki T 1999 ..."
-_SURNAME_INITIALS = re.compile(rf"^({_NAME_WORD})\s+(?:{_UP}{{1,3}}\s?){{1,3}}(?:[,.]|(?=(?:19|20)\d{{2}}\b))")
+# "He K, Zhang X", "PARK J S,", "Abd el-Kader AI,", alone before a physics-style year: "Namiki T 1999 ...", and
+# JMIR's list without commas: "Chen H Fang Z Singla Y".
+_SURNAME_INITIALS = re.compile(rf"^({_NAME_WORD}(?:\s{_NAME_WORD})?)\s+(?:{_UP}{{1,3}}\s?){{1,3}}"
+                               rf"(?:[,.]|(?=(?:19|20)\d{{2}}\b)|(?=\s?{_NAME_WORD}\s{_BARE_INITIALS}[\s,.]))")
 _CJK_AUTHOR = re.compile(r"^([一-鿿]{2,4})\s*[,，.．、]")  # "周志华." (GB/T, Chinese)
 
 
@@ -151,7 +199,8 @@ def _plausible_title(title: str | None) -> str | None:
     """A title found after an author list, unless it is really a note, a link or a venue with its numbers."""
     if not title:
         return None
-    title = re.split(r",\s+[Ii]n\s", title)[0].rstrip(".．。,").strip()  # "..., in Proc. CVPR" (IEEE without quotes)
+    # "..., in Proc. CVPR" (IEEE without quotes), "..., 2009 IEEE International Workshop on ..."
+    title = re.split(r",\s+[Ii]n\s|,\s+(?:19|20)\d{2}\s+(?=[A-Z])", title)[0].rstrip(".．。,").strip()
     if not title or _NOT_A_TITLE.match(title) or _VENUE_NUMBERS.search(title) or not re.search(r"[^\W\d_]{2}", title):
         return None
     return title
@@ -170,21 +219,38 @@ def extract_title(text: str) -> str | None:
     return _TITLE_TAIL.sub("", title).strip() or None if title else None
 
 
+def _opens_a_part(text: str, start: int) -> bool:
+    """A quoted title comes after the names, a year or a stop, not after a word in mid-sentence: in "... following
+    exposure to “facts and myths” message format variations" the quotes are inside the title."""
+    before = text[:start].rstrip()
+    return not before or not before[-1].isalnum()
+
+
 def _find_title(text: str) -> str | None:
     if text.startswith("@"):  # a BibTeX entry
         return bibtex_field(text, "title")
-    quoted = _QUOTED_TITLE.search(text)
-    if quoted and len(quoted.group(1).split()) >= 2:
-        return quoted.group(1).strip()
-    single = _SINGLE_QUOTED_TITLE.search(text)
-    if single and len(single.group(1).split()) >= 2:
-        return single.group(1).strip()
+    for pattern in (_QUOTED_TITLE, _GUILLEMET_TITLE, _SINGLE_QUOTED_TITLE):
+        quoted = next((q for q in pattern.finditer(text)
+                       if len(q.group(1).split()) >= 2 and _opens_a_part(text, q.start())), None)
+        if quoted:
+            return quoted.group(1).strip()
+    gost = _GOST_TITLE.match(text)
+    title = _plausible_title(gost.group(1)) if gost else None
+    if title:
+        return title
     for pattern in (_APA_TITLE, _ACM_TITLE, _GBT_TITLE):
         found = pattern.search(text)
         if found and pattern is _ACM_TITLE and not _only_names(text[:found.start()]):
             continue  # the year came after the title, and what follows it is a note, a venue or a link
         if found and not _NOT_A_TITLE.match(found.group(1)):
-            return found.group(1).rstrip(".").strip()
+            title = found.group(1)
+            if pattern is _ACM_TITLE:  # "..., 2009 IEEE International Workshop on ...": the venue after a comma
+                title = re.split(r",\s+(?:19|20)\d{2}\s+(?=[A-Z])", title)[0]
+            return title.rstrip(".").strip()
+    ams = _AMS_TITLE.match(text)
+    title = _plausible_title(ams.group(1)) if ams else None
+    if title:
+        return title
     title = _plausible_title(_title_after_names(text))  # full names first: "Theodore R." is not Vancouver's "Hinton G."
     if title:
         return title
@@ -196,11 +262,23 @@ def _find_title(text: str) -> str | None:
         title = _plausible_title(re.split(r"\s*\(|\s+pp?\.?\s*\d|\.\s", rest, maxsplit=1)[0])
         if title:
             return title
-    for pattern in (_SURNAME_INITIALS_LIST, _SURNAME_COMMA_INITIALS_LIST, _INITIALS_SURNAME_LIST, _SURNAME_GIVEN_LIST):
+    for pattern in (_SURNAME_INITIALS_LIST, _ENDNOTE_LIST, _SURNAME_COMMA_INITIALS_LIST, _INITIALS_SURNAME_LIST,
+                    _SURNAME_GIVEN_LIST):
         found = pattern.match(text)
         title = _plausible_title(found.group(1)) if found else None
+        if title and _ABBREVIATED.fullmatch(title) and _JOURNAL_GOES_ON.match(text, found.end()):
+            return None  # a journal's name, in a style without titles: "I. Ya. Aref'eva, Phys. Part. Nucl. 52, 512"
         if title:
             return title
+    after = _AFTER_ET_AL.match(text)
+    title = _plausible_title(after.group(2)) if after and _only_names(after.group(1)) else None
+    if title:
+        return title
+    found = _SURNAME_INITIALS_COMMA.match(text)
+    title = _plausible_title(found.group(1)) if found else None
+    # Not names taken for a title: "jones KW, Polani PE, et al" when a surname has no capital.
+    if title and not re.search(rf"\b{_ET_AL}\b|[\w'’-]+\s{_BARE_INITIALS},\s", title):
+        return title
     return None
 
 
