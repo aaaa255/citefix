@@ -7,7 +7,9 @@ export const SUPPORT = {
   supported: { tone: 'ok', label: 'verdict.supported', icon: 'check' },
   partially_supported: { tone: 'warn', label: 'verdict.partly', icon: 'query' },
   not_supported: { tone: 'bad', label: 'verdict.notSupported', icon: 'cross' },
-  insufficient_evidence: { tone: 'warn', label: 'verdict.cantTell', icon: 'query' },
+  // The abstract is on the subject but does not settle the claim: a question for the full text, in grey,
+  // not a mark against the citation.
+  insufficient_evidence: { tone: 'unknown', label: 'verdict.cantTell', icon: 'query' },
 };
 export const REFERENCE = {
   verified: { tone: 'ok', label: 'refs.found', icon: 'check' },
@@ -15,7 +17,7 @@ export const REFERENCE = {
   not_found: { tone: 'bad', label: 'refs.notFound', icon: 'cross' },
 };
 export const SOURCES = { openalex: 'OpenAlex', crossref: 'Crossref', arxiv: 'arXiv', semantic_scholar: 'Semantic Scholar' };
-export const TONE_RANK = { ok: 0, pending: 1, warn: 2, bad: 3 };
+export const TONE_RANK = { ok: 0, pending: 1, unknown: 2, warn: 3, bad: 4 };
 // "Cite instead" needs a citation that clearly fails; a paper found for any other one is only a possible source.
 const CLEAR_FAILURE = new Set(['reference_not_found', 'not_supported']);
 const MARKER = /\[(\d+(?:\s*[,–-]\s*\d+)*)\]/g;
@@ -185,12 +187,14 @@ function summary(c) {
   const replaced = pairs.filter((p) => p.fix === 'replace').length;
   const possible = pairs.filter((p) => p.fix === 'candidate').length;
   const rewrite = pairs.filter((p) => p.fix === 'rewrite').length;
-  const open = pairs.length - supported - replaced - possible - rewrite;
+  const unknown = pairs.filter((p) => p.tone === 'unknown' && (!p.fix || p.fix === 'none')).length;
+  const open = pairs.length - supported - replaced - possible - rewrite - unknown;
   const parts = [];
   if (supported) parts.push(['ok', 'sum.supported', supported]);
   if (replaced) parts.push(['fix', 'sum.better', replaced]);
   if (possible) parts.push(['fix', 'sum.possible', possible]);
   if (rewrite) parts.push(['fix', 'sum.rewrite', rewrite]);
+  if (unknown) parts.push(['unknown', 'sum.unknown', unknown]);
   if (open) parts.push(['bad', 'sum.unresolved', open]);
   return { kind: 'summary', count: pairs.length, seconds: c.seconds, recorded: c.replay, parts };
 }
@@ -278,7 +282,7 @@ function reduceEvent(state, e) {
       const missing = e.kind === 'reference_not_found';
       pair.verdictKey = e.kind;
       if (missing) setVerdict(pair, 'bad', 'verdict.refNotFound', 'cross');
-      else setVerdict(pair, 'warn', 'verdict.noAbstract', 'query');
+      else setVerdict(pair, 'unknown', 'verdict.noAbstract', 'query');
       pair.parts.push(missing ? { kind: 'why', key: 'note.refNotFound', lines: 2 } : { kind: 'why', text: e.text, lines: 2 });
       if (!missing) finish(pair); // a missing reference goes on to the agent
       break;
@@ -345,6 +349,7 @@ function reduceEvent(state, e) {
         pair.fixData = {
           type: 'rewrite', keeps, rewritten, paper: e.paper || null, quote: e.quote || '',
           check: Boolean(e.check), explanation: e.explanation || '',
+          hedge: pair.verdictKey === 'insufficient_evidence', // the cited paper's full text may still say it
         };
         pair.fix = 'rewrite';
         pair.suggested = keeps ? rewritten : `${rewritten} ${e.paper.apa}`;

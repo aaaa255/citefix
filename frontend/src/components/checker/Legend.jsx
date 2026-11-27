@@ -16,6 +16,10 @@ export default function Legend() {
           <dd>{t('legend.warn')}</dd>
         </div>
         <div>
+          <dt><span className="sample is-unknown">{t('legend.unknown.sample')}</span></dt>
+          <dd>{t('legend.unknown')}</dd>
+        </div>
+        <div>
           <dt><span className="sample is-bad">{t('legend.bad.sample')}</span></dt>
           <dd>{t('legend.bad')}</dd>
         </div>

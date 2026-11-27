@@ -71,12 +71,14 @@
 .clause.is-pending { text-decoration-style: dashed; text-decoration-color: var(--rule-strong); }
 .is-ok.clause, .is-ok.sample { text-decoration-style: solid; text-decoration-color: var(--stet-mark); }
 .is-warn.clause, .is-warn.sample { text-decoration-style: dotted; text-decoration-thickness: 3px; text-decoration-color: var(--query-mark); }
+.is-unknown.clause, .is-unknown.sample { text-decoration-style: dotted; text-decoration-thickness: 3px; text-decoration-color: var(--unknown-mark); }
 .is-bad.clause, .is-bad.sample { text-decoration-style: wavy; text-decoration-thickness: 1.5px; text-decoration-color: var(--proof-mark); }
 .clause.is-hot { background: var(--accent-wash); }
 .marker { font-variant-numeric: tabular-nums; transition: color 0.4s; }
 /* each number takes its own citation's ink, so two citations in one sentence stay apart */
 .marker.is-ok { color: var(--stet); }
 .marker.is-warn { color: var(--query); }
+.marker.is-unknown { color: var(--unknown); }
 .marker.is-bad { color: var(--proof); }
 .marker.is-struck { color: var(--ink-3); text-decoration: line-through 2px var(--proof-mark); }
 /* The agent's replacement, written in after the sentence and swiped with a highlighter: uneven ink, ragged ends,
@@ -125,6 +127,7 @@
 .status.is-warn { color: var(--query); }
 .status strong { font-weight: 650; }
 .status strong.is-ok { color: var(--stet); }
+.status strong.is-unknown { color: var(--unknown); }
 .status strong.is-fix { color: var(--on-accent); }
 .status strong.is-bad { color: var(--proof); }
 .notice { margin: 6px 0 0; color: var(--ink-3); font-size: 13px; }
@@ -152,6 +155,7 @@
 .note-verdict .icon { width: 16px; height: 16px; }
 .is-ok .note-verdict, .note-verdict.is-ok { color: var(--stet); }
 .is-warn .note-verdict, .note-verdict.is-warn { color: var(--query); }
+.is-unknown .note-verdict, .note-verdict.is-unknown { color: var(--unknown); }
 .is-bad .note-verdict, .note-verdict.is-bad { color: var(--proof); }
 .note-sentence { display: none; margin: 3px 0 0; overflow: hidden; color: var(--ink-2); font: 400 13.5px/1.45 var(--font-text); white-space: nowrap; text-overflow: ellipsis; }
 .note.is-repeat .note-sentence { display: block; }
@@ -163,6 +167,7 @@
 .evidence { margin: 7px 0 0; padding: 7px 11px; border-radius: 10px; color: var(--ink); font: italic 400 14px/1.5 var(--font-text); background: var(--rule); }
 .evidence.is-ok { background: var(--stet-wash); }
 .evidence.is-warn { background: var(--query-wash); }
+.evidence.is-unknown { background: var(--unknown-wash); }
 .evidence.is-bad { background: var(--proof-wash); }
 .evidence.is-fix { background: var(--accent-wash); }
 .clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 3); overflow: hidden; }

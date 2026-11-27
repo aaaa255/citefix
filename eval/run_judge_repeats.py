@@ -9,6 +9,7 @@ eval/data/support_sample.jsonl. Each reference is looked up once; only the judgi
 - should be flagged: labelled without "supported". A "supported" verdict lets it through.
 - borderline: "supported" or another verdict both count as right.
 - too harsh: "not supported" (a red mark) where the labels allow only milder verdicts.
+- too soft: "insufficient evidence" where the labels call for a red mark and do not allow it.
 
     python eval/run_judge_repeats.py [--models deepseek-flash deepseek-v4-pro] [--runs 3]
 """
@@ -32,7 +33,7 @@ from citefix import sources  # noqa: E402
 from citefix import llm  # noqa: E402
 from citefix.existence import check_many  # noqa: E402
 from citefix.review import split_passage  # noqa: E402
-from citefix.support import SUPPORTED, UNSUPPORTED, judge_support  # noqa: E402
+from citefix.support import SUPPORTED, UNCLEAR, UNSUPPORTED, judge_support  # noqa: E402
 
 MARKER = re.compile(r"\s*\[\d+(?:\s*[,–-]\s*\d+)*\]")
 GROUPS = ("pass", "flag", "borderline")
@@ -80,6 +81,8 @@ def summarize(model: str, rows: list[dict]) -> None:
     print("verdict among the accepted ones:     ", rate(sum(r["verdict"] in r["accept"] for r in exact), len(exact)))
     milder = [r for r in exact if UNSUPPORTED not in r["accept"]]
     print("not supported where only milder fits:", rate(sum(r["verdict"] == UNSUPPORTED for r in milder), len(milder)))
+    red = [r for r in exact if UNSUPPORTED in r["accept"] and UNCLEAR not in r["accept"]]
+    print("can't tell where a red mark is due:  ", rate(sum(r["verdict"] == UNCLEAR for r in red), len(red)))
     wrong_paper = [r for r in mine if r.get("label") == "unsupported"]
     print("hand-written wrong papers, not supported:", rate(sum(r["verdict"] == UNSUPPORTED for r in wrong_paper),
                                                        len(wrong_paper)))
