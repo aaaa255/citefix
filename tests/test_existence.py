@@ -8,6 +8,28 @@ from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, _pick_abstract, c
 from citefix.sources import Candidate
 from citefix.textutil import parse_reference
 
+
+def _no_network(*args, **kwargs):
+    raise AssertionError("a test tried to reach the network")
+
+
+# Every lookup a test does not mock fails loudly, and Open Library, which the tests below mostly leave alone,
+# finds nothing.
+_OFFLINE = [mock.patch("citefix.sources.urllib.request.urlopen", side_effect=_no_network),
+            mock.patch.object(sources._NO_REDIRECTS, "open", side_effect=_no_network),
+            mock.patch("citefix.sources.openlibrary", return_value=[]),
+            mock.patch("citefix.sources.openlibrary_isbn", return_value=[])]
+
+
+def setUpModule():
+    for patcher in _OFFLINE:
+        patcher.start()
+
+
+def tearDownModule():
+    for patcher in _OFFLINE:
+        patcher.stop()
+
 GPT3 = parse_reference("Brown, T., Mann, B., & Ryder, N. (2020). Language models are few-shot learners. NeurIPS.")
 GAN = parse_reference("Goodfellow, I., & Bengio, Y. (2014). Generative adversarial nets. NeurIPS, 27.")
 BERT = parse_reference("Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training of deep "
@@ -245,6 +267,53 @@ class FieldsTest(unittest.TestCase):
             result = check_reference(ref.raw)
         by_id.assert_any_call("pmid:33301246")
         self.assertTrue(result.match.doi_match)
+
+
+def checked_book(raw: str, books=(), by_isbn=(), found=()):
+    """check_reference with OpenAlex, Crossref and arXiv finding `found` (or nothing) and Open Library `books`."""
+    with mock.patch("citefix.sources.openalex", return_value=list(found)), \
+            mock.patch("citefix.sources.crossref", return_value=[]), \
+            mock.patch("citefix.sources.arxiv", return_value=[]), \
+            mock.patch("citefix.sources.openlibrary", return_value=list(books)) as library, \
+            mock.patch("citefix.sources.openlibrary_isbn", return_value=list(by_isbn)) as isbn:
+        return check_reference(raw), library, isbn
+
+
+SUTTON_BARTO = Candidate("openlibrary", "Reinforcement Learning: An Introduction", 2018,
+                         ["Richard S. Sutton", "Andrew G. Barto"], venue_type="book")
+
+
+class BookTest(unittest.TestCase):
+    """Textbooks and monographs, many without a DOI, from Open Library."""
+
+    def test_a_textbook_in_its_cited_edition(self):
+        first_edition = Candidate("crossref", "Reinforcement Learning: An Introduction", 1998,
+                                  ["Richard S. Sutton", "Andrew G. Barto"])
+        result, library, _ = checked_book("Sutton, R. S., & Barto, A. G. (2018). Reinforcement learning: An "
+                                          "introduction (2nd ed.). MIT Press.", [SUTTON_BARTO], found=[first_edition])
+        library.assert_called_once_with("Reinforcement learning", author="Sutton", year=2018)
+        self.assertEqual((result.verdict, result.match.cand.source), (VERIFIED, "openlibrary"))
+        self.assertIsNone(result.abstract)
+
+    def test_an_isbn(self):
+        book = Candidate("openlibrary", "Deep Learning", 2016, ["Ian Goodfellow"], venue_type="book")
+        result, _, isbn = checked_book("Goodfellow, I. (2016). Deep learning. MIT Press. ISBN 978-0-262-03561-3",
+                                       by_isbn=[book])
+        isbn.assert_called_once_with("9780262035613", year=2016)
+        self.assertEqual(result.verdict, VERIFIED)
+
+    def test_another_book_with_the_same_title(self):
+        other = Candidate("openalex", "机器学习", 2018, ["郭丰"])
+        result, _, _ = checked_book("周志华. 机器学习[M]. 北京: 清华大学出版社, 2016.", found=[other])
+        self.assertEqual(result.verdict, SUSPICIOUS)  # it may well exist; no index has it
+        self.assertIn("probably another work with the same title", result.reason)
+
+    def test_a_journal_article_asks_open_library_only_when_nothing_else_finds_it(self):
+        result, library, _ = checked_book(
+            "LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444.",
+            found=[Candidate("openalex", "Deep learning", 2015, ["Yann LeCun"])])
+        self.assertEqual(result.verdict, VERIFIED)
+        library.assert_not_called()
 
 
 MESSY = "lecun yann / bengio y / hinton g -- deep learning -- nature vol 521 2015 pp 436"

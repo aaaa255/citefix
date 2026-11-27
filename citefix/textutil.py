@@ -44,8 +44,14 @@ _SURNAME_GIVEN_LIST = re.compile(  # MLA books: "Hastie, Trevor, et al. The Elem
 _VENUE_NUMBERS = re.compile(r"\b\d+\s*[,:]\s*\d+|\((?:19|20)\d{2}\)")
 # What styles add after a title: "(Version 7)", "[Internet]", a book's "(Springer New York, 2009)", or the
 # translation of a title in another language: "Update Chemoperfusion [Update on chemoinfusion]".
-_TITLE_TAIL = re.compile(r"\s*(?:[\[(](?:version\s*\d+|v\d+|internet|online|preprint|e-?print|pdf)[\])]"
+_TITLE_TAIL = re.compile(r"\s*(?:[\[(](?:version\s*\d+|v\d+|internet|online|preprint|e-?print|pdf"
+                         r"|\d+(?:st|nd|rd|th)\s+ed(?:\.|ition)?)[\])]"
                          r"|\([^()]*\b(?:19|20)\d{2}\)|\[[^\[\]]{3,}\])\s*$", re.IGNORECASE)
+# Signs that a reference is a book: GB/T's [M], a publisher, an edition, an ISBN.
+_BOOK = re.compile(r"\[M(?:/OL)?\]|出版社|\bISBN\b|\b\d+(?:st|nd|rd|th)\s+[Ee]d(?:\.|ition)|\b(?:Press|Publishers?|Publishing"
+                   r"|Verlag|Books|Pearson|Prentice|McGraw|Addison|O'Reilly|Routledge|SAGE|Artech|CRC|Freeman|Norton"
+                   r"|Penguin|Giroux|Elsevier|Wiley|Springer)\b")
+_ISBN = re.compile(r"\bISBN(?:-1[03])?:?\s*((?:97[89][\s-]?)?(?:\d[\s-]?){9}[\dXx])\b")
 # The year right after the authors, as physics journals write it ("Namiki T 1999 IEEE Trans. Microw. Theory Tech.
 # 47 2003"), where a later number can look like a year.
 _YEAR_AFTER_NAMES = re.compile(
@@ -182,6 +188,14 @@ def _find_title(text: str) -> str | None:
     title = _plausible_title(_title_after_names(text))  # full names first: "Theodore R." is not Vancouver's "Hinton G."
     if title:
         return title
+    # Physics style: after "names year" comes a journal with its volume and page, or a book's title and its
+    # publisher: "Taflove A, Hagness S C 2005 Computational Electrodynamics (Norwood: Artech House)".
+    after = _YEAR_AFTER_NAMES.match(text)
+    rest = text[after.end():].strip() if after else ""
+    if rest and not volume_and_page(rest):
+        title = _plausible_title(re.split(r"\s*\(|\s+pp?\.?\s*\d|\.\s", rest, maxsplit=1)[0])
+        if title:
+            return title
     for pattern in (_SURNAME_INITIALS_LIST, _SURNAME_COMMA_INITIALS_LIST, _INITIALS_SURNAME_LIST, _SURNAME_GIVEN_LIST):
         found = pattern.match(text)
         title = _plausible_title(found.group(1)) if found else None
@@ -228,13 +242,27 @@ def extract_arxiv_id(text: str) -> str | None:
 
 
 def extract_other_ids(text: str, doi: str | None) -> list[str]:
-    """PubMed ids and an ACL Anthology DOI, written as OpenAlex looks works up by them."""
+    """PubMed ids and an ACL Anthology DOI, written as OpenAlex looks works up by them, and an ISBN."""
     found = [f"pmid:{m.group(1)}" for m in _PMID.finditer(text)][:1]
     found += [f"pmcid:{m.group(1)}" for m in _PMCID.finditer(text)][:1]
     acl = _ACL_ID.search(text)
     if acl and not doi:
         found.append(f"doi:10.18653/v1/{acl.group(1)}")
+    isbn = _ISBN.search(text)
+    if isbn:
+        found.append("isbn:" + re.sub(r"[\s-]", "", isbn.group(1)).upper())
     return found
+
+
+def looks_like_book(text: str) -> bool:
+    return bool(_BOOK.search(text))
+
+
+def main_title(title: str) -> str:
+    """A book's title without its subtitle, as catalogues search best: "Computational Electrodynamics",
+    "Self-efficacy"."""
+    main = re.split(r"[:：]", title, maxsplit=1)[0].strip()
+    return main if len(main) >= 4 else title
 
 
 def first_author_surname(text: str) -> str | None:
