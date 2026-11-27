@@ -150,7 +150,7 @@ const en = {
   'settings.nameHint': 'Sent only with your feedback.',
   'settings.note': 'Explanations from the model and quotes from abstracts stay in their original language.',
   'footer.for': 'for the Silicon Valley Buildathon 2026',
-  'footer.sources': 'Records from OpenAlex, Crossref and arXiv. Judgments by DeepSeek.',
+  'footer.sources': 'Records from OpenAlex, Crossref and arXiv, abstracts also from PubMed. Judgments by DeepSeek.',
 };
 
 const zh = {
@@ -292,7 +292,7 @@ const zh = {
   'settings.nameHint': '只在发送反馈时一起发送。',
   'settings.note': '模型给出的解释和摘要中的引文保留原文语言。',
   'footer.for': '参加 Silicon Valley Buildathon 2026 的作品',
-  'footer.sources': '文献记录来自 OpenAlex、Crossref 和 arXiv，判断由 DeepSeek 完成。',
+  'footer.sources': '文献记录来自 OpenAlex、Crossref 和 arXiv，部分摘要来自 PubMed，判断由 DeepSeek 完成。',
 };
 
 const es = {
@@ -437,7 +437,7 @@ const es = {
   'settings.nameHint': 'Solo se envía con tus comentarios.',
   'settings.note': 'Las explicaciones del modelo y las citas de los resúmenes se mantienen en su idioma original.',
   'footer.for': 'para el Silicon Valley Buildathon 2026',
-  'footer.sources': 'Registros de OpenAlex, Crossref y arXiv. Valoraciones de DeepSeek.',
+  'footer.sources': 'Registros de OpenAlex, Crossref y arXiv, y resúmenes también de PubMed. Valoraciones de DeepSeek.',
 };
 
 const DICTS = { en, zh, es };
