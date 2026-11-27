@@ -270,7 +270,8 @@ function reduceEvent(state, e) {
         s.status = say('status.checking', { n: c.total });
         s.progress = 0;
       } else {
-        s.status = say('status.noCitations', null, 'warn');
+        // Only a reference list was pasted: say so, rather than asking for citations the text cannot have.
+        s.status = c.body.trim() ? say('status.noCitations', null, 'warn') : say('status.refsOnly');
         s.progress = 'hidden';
       }
       break;

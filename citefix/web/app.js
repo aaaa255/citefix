@@ -518,6 +518,9 @@ const handlers = {
     if (current.total) {
       setStatus(`Checking ${plural(current.total, 'citation')}…`);
       setProgress(0);
+    } else if (!current.body.trim()) {
+      setStatus('Only the references are checked: there is no passage above them to find citations in.');
+      ui.progress.hidden = true;
     } else {
       setStatus('No citations found. Cite with [1] or (Author, Year) so each one points into the reference list.', 'warn');
       ui.progress.hidden = true;

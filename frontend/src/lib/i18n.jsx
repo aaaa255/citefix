@@ -55,6 +55,7 @@ const en = {
   'status.checking': ({ n }) => `Checking ${n} ${s(n, 'citation', 'citations')}…`,
   'status.agent': ({ refs }) => `The agent is looking for ${s(refs.length, 'a supporting paper', 'supporting papers')} for ${en.list(refs)}…`,
   'status.noCitations': 'No citations found. Cite with [1] or (Author, Year) so each one points into the reference list.',
+  'status.refsOnly': 'Only the references are checked: there is no passage above them to find citations in.',
   'status.stopped': 'Stopped. The results so far are kept.',
   'status.needText': 'Paste a passage and its references first, or load the example.',
   'status.exampleFailed': 'The example could not be loaded.',
@@ -200,6 +201,7 @@ const zh = {
   'status.checking': ({ n }) => `正在检查 ${n} 处引用…`,
   'status.agent': ({ refs }) => `Agent 正在为 ${zh.list(refs)} 寻找支持的论文…`,
   'status.noCitations': '没有找到引用。请用 [1] 或（作者, 年份）的形式引用，让每处引用都能对应到参考文献列表。',
+  'status.refsOnly': '只检查了参考文献：参考文献上面没有正文，所以没有引用可查。',
   'status.stopped': '已停止，目前的结果会保留。',
   'status.needText': '请先粘贴正文和参考文献，或载入示例。',
   'status.exampleFailed': '示例载入失败。',
@@ -348,6 +350,7 @@ const es = {
     ? `El agente busca un artículo que respalde ${refs[0]}…`
     : `El agente busca artículos que respalden ${es.list(refs)}…`),
   'status.noCitations': 'No se encontraron citas. Cita con [1] o (Autor, Año) para que cada una remita a la lista de referencias.',
+  'status.refsOnly': 'Solo se revisan las referencias: no hay ningún texto encima de ellas en el que buscar citas.',
   'status.stopped': 'Revisión detenida. Se conservan los resultados obtenidos.',
   'status.needText': 'Primero pega un texto con sus referencias o carga el ejemplo.',
   'status.exampleFailed': 'No se pudo cargar el ejemplo.',

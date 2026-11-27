@@ -1,7 +1,7 @@
 import unittest
 
-from citefix.textutil import (extract_doi, join_wrapped, parse_reference, partial_similarity, plausible_abstract,
-                              title_similarity)
+from citefix.textutil import (extract_doi, join_wrapped, normalize, parse_reference, partial_similarity,
+                              plausible_abstract, title_similarity, volume_and_page)
 
 
 class ParseReferenceTest(unittest.TestCase):
@@ -42,6 +42,165 @@ class ParseReferenceTest(unittest.TestCase):
     def test_page_range_is_not_a_year(self):
         ref = parse_reference("Srivastava, N. Dropout. Journal of Machine Learning Research, 15(1), 1929–1958, 2014.")
         self.assertEqual(ref.year, 2014)
+
+
+class FullNamesFirstTest(unittest.TestCase):
+    """Full names, the title, then the venue and year, perhaps a note and an identifier. The sentence after the
+    year is a note here, not the title as in ACM style."""
+
+    def test_title_after_the_names(self):
+        ref = parse_reference("[6]\tJoon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, "
+                              "Michael S. Bernstein. Generative Agents: Interactive Simulacra of Human Behavior. 2023. "
+                              "Read version: v2. DOI: 10.48550/arXiv.2304.03442.")
+        self.assertEqual(ref.title, "Generative Agents: Interactive Simulacra of Human Behavior")
+        self.assertEqual((ref.first_author, ref.year, ref.arxiv_id), ("Park", 2023, "2304.03442"))
+
+    def test_venue_and_year_after_the_title(self):
+        ref = parse_reference("Zhenyu Guan, Xiangyu Kong, Fangwei Zhong, Yizhou Wang. Richelieu: Self-Evolving LLM-Based "
+                              "Agents for AI Diplomacy. NeurIPS, 2024. Main track.")
+        self.assertEqual(ref.title, "Richelieu: Self-Evolving LLM-Based Agents for AI Diplomacy")
+        self.assertEqual(ref.first_author, "Guan")
+
+    def test_et_al_then_the_title(self):
+        ref = parse_reference("Wenyue Hua et al. War and Peace (WarAgent): Large Language Model-based Multi-Agent "
+                              "Simulation of World Wars. 2023. Read: method and results. arXiv:2311.17227.")
+        self.assertEqual(ref.title, "War and Peace (WarAgent): Large Language Model-based Multi-Agent Simulation of World Wars")
+        self.assertEqual((ref.first_author, ref.arxiv_id), ("Hua", "2311.17227"))
+
+    def test_middle_initial_is_not_the_end_of_the_names(self):
+        ref = parse_reference("Theodore R. Sumers, Shunyu Yao, Karthik Narasimhan, Thomas L. Griffiths. Cognitive "
+                              "Architectures for Language Agents. 2023. arXiv:2309.02427.")
+        self.assertEqual(ref.title, "Cognitive Architectures for Language Agents")
+        self.assertEqual(ref.first_author, "Sumers")
+
+    def test_chinese_without_a_type_tag(self):
+        ref = parse_reference("周志华. 机器学习. 北京: 清华大学出版社, 2016.")
+        self.assertEqual((ref.title, ref.first_author, ref.year), ("机器学习", "周志华", 2016))
+
+    def test_acm_year_still_follows_the_names(self):
+        ref = parse_reference("Wenyue Hua, Lizhou Fan, et al. 2023. War and peace (WarAgent): Large language model-based "
+                              "multi-agent simulation of world wars. arXiv.")
+        self.assertEqual(ref.title, "War and peace (WarAgent): Large language model-based multi-agent simulation of world wars")
+
+    def test_a_doi_is_never_the_title(self):
+        self.assertIsNone(parse_reference("Doe, J. 2020. DOI: 10.1234/abcd.5678.").title)
+
+
+class StylesTest(unittest.TestCase):
+    """One paper as the common citation styles write it (rendered by the DOI system's CSL styles)."""
+
+    def test_title_in_each_style(self):
+        for style, text in (
+            ("vancouver", "LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444."),
+            ("nature", "LeCun, Y., Bengio, Y. & Hinton, G. Deep learning. Nature 521, 436–444 (2015)."),
+            ("acs", "LeCun, Y.; Bengio, Y.; Hinton, G. Deep Learning. Nature 2015, 521 (7553), 436–444."),
+            ("science", "Y. LeCun, Y. Bengio, G. Hinton, Deep learning. Nature 521, 436–444 (2015)."),
+            ("springer", "LeCun Y, Bengio Y, Hinton G (2015) Deep learning. Nature 521:436–444."),
+            ("harvard", "LeCun, Y., Bengio, Y. and Hinton, G. (2015) ‘Deep learning’, Nature, 521(7553), pp. 436–444."),
+            ("mla", "LeCun, Yann, et al. “Deep Learning.” Nature, vol. 521, no. 7553, 2015, pp. 436–44."),
+            ("elsevier", "LeCun, Y., Bengio, Y., Hinton, G., 2015. Deep learning. Nature 521, 436–444."),
+            ("ieee, no quotes", "Y. LeCun, Y. Bengio, and G. Hinton, Deep learning, in Proc. Nature, 2015, pp. 436–444."),
+        ):
+            with self.subTest(style=style):
+                ref = parse_reference(text)
+                self.assertEqual(normalize(ref.title or ""), "deep learning")
+                self.assertEqual((ref.first_author, ref.year), ("LeCun", 2015))
+
+    def test_details_of_real_lists(self):
+        for text, title, author in (
+            ("1 Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” Nature 521(7553), 436–444 (2015).",
+             "Deep learning", "LeCun"),  # AIP numbers its list without brackets
+            ("Park JS, O’Brien J, Cai CJ, et al (2023) Generative Agents: Interactive Simulacra of Human Behavior. "
+             "Proceedings of UIST.", "Generative Agents: Interactive Simulacra of Human Behavior", "Park"),
+            ("PARK J S, O’BRIEN J, CAI C J, et al. Generative Agents: Interactive Simulacra of Human Behavior[C]. "
+             "UIST, 2023.", "Generative Agents: Interactive Simulacra of Human Behavior", "PARK"),
+            ("Park, J.S., O’Brien, J., Cai, C.J., Bernstein, M.S., 2023. Generative Agents: Interactive Simulacra of "
+             "Human Behavior. Proceedings of UIST.", "Generative Agents: Interactive Simulacra of Human Behavior", "Park"),
+            ("Polack, F. P.; Pérez Marc, G.; Türeci, Ö.; Gruber, W. C. Safety and Efficacy of the BNT162b2 mRNA "
+             "Covid-19 Vaccine. N. Engl. J. Med. 2020, 383 (27), 2603–2615.",
+             "Safety and Efficacy of the BNT162b2 mRNA Covid-19 Vaccine", "Polack"),
+            ("Albert Bandura. 1977. Self-efficacy: Toward a unifying theory of behavioral change. Psychological "
+             "Review 84, 2 (1977), 191–215.", "Self-efficacy: Toward a unifying theory of behavioral change", "Bandura"),
+            ("Vaswani, A., Shazeer, N., & Polosukhin, I. (2017). Attention Is All You Need (Version 7). arXiv.",
+             "Attention Is All You Need", "Vaswani"),
+            ("Vaswani A, Shazeer N, Parmar N, et al (2017) Attention Is All You Need", "Attention Is All You Need",
+             "Vaswani"),
+            ("Hastie, Trevor, et al. The Elements of Statistical Learning. Springer Series in Statistics, 2009.",
+             "The Elements of Statistical Learning", "Hastie"),
+            ("1 T. Hastie, R. Tibshirani, and J. Friedman, The Elements of Statistical Learning (Springer New York, 2009).",
+             "The Elements of Statistical Learning", "Hastie"),
+        ):
+            with self.subTest(text=text[:40]):
+                ref = parse_reference(text)
+                self.assertEqual((ref.title, ref.first_author), (title, author))
+
+    def test_physics_style(self):
+        ref = parse_reference("Namiki T 1999 IEEE Trans. Microw. Theory Tech.47 2003")
+        self.assertEqual((ref.title, ref.first_author, ref.year), (None, "Namiki", 1999))  # 2003 is the page
+        self.assertEqual(volume_and_page(ref.text), ("47", "2003"))
+        ref = parse_reference("Quach J Q, McGhee K E, Virgili T 2022 Sci. Adv. 8 eabk3160")
+        self.assertEqual((ref.first_author, ref.year, volume_and_page(ref.text)), ("Quach", 2022, ("8", "eabk3160")))
+
+    def test_surname_particles_and_translated_titles(self):
+        ref = parse_reference("de Man, F. M., Goey, A. K. L. & Bins, S. Individualization of irinotecan treatment: "
+                              "A review. Clin. Pharmacokinet. 57, 1229–1254 (2018).")
+        self.assertEqual((ref.title, ref.first_author), ("Individualization of irinotecan treatment: A review", "Man"))
+        ref = parse_reference("Lubienski, A. et al. Update Chemoperfusion und -embolisation [Update on chemoinfusion "
+                              "and chemoembolization treatments]. Radiologe (2007).")
+        self.assertEqual(ref.title, "Update Chemoperfusion und -embolisation")
+
+    def test_a_stray_quote_from_the_reference_before(self):
+        ref = parse_reference('Mentorship." Management Science 72 (6): 4610-32. Starr, Evan. 2019. "Consider This: '
+                              'Training, Wages, and the Enforceability of Covenants Not to Compete." ILR Review 72 (4).')
+        self.assertTrue(ref.title.startswith("Consider This"))
+
+    def test_a_note_date_is_not_the_year(self):
+        ref = parse_reference("K. He et al., “Deep residual learning for image recognition,” in Proc. CVPR, 2016, "
+                              "pp. 770–778. Accessed 12 March 2026.")
+        self.assertEqual(ref.year, 2016)
+
+    def test_gbt_with_any_type_tag(self):
+        ref = parse_reference("VASWANI A, SHAZEER N, PARMAR N, et al. Attention Is All You Need[A/OL]. arXiv, 2017.")
+        self.assertEqual(ref.title, "Attention Is All You Need")
+
+    def test_a_venue_with_numbers_is_not_a_title(self):
+        ref = parse_reference("Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436 (2015).")  # AIP leaves out titles
+        self.assertIsNone(ref.title)
+        self.assertEqual(ref.first_author, "LeCun")
+
+    def test_bibtex(self):
+        ref = parse_reference("@article{LeCun_2015, title={Deep {L}earning}, volume={521}, journal={Nature}, "
+                              "author={LeCun, Yann and Bengio, Yoshua}, year={2015}, doi={10.1038/nature14539}}")
+        self.assertEqual((ref.title, ref.first_author, ref.year, ref.doi),
+                         ("Deep Learning", "LeCun", 2015, "10.1038/nature14539"))
+
+    def test_bibtex_entries_over_several_lines(self):
+        lines = ["@article{a,", "  title={Deep learning},", "  author={LeCun, Yann},", "}",
+                 "@inproceedings{b,", "  title = {Attention is all you need},", "}"]
+        self.assertEqual(len(join_wrapped(lines)), 2)
+
+
+class OtherIdsTest(unittest.TestCase):
+    def test_pubmed_ids_and_acl_anthology(self):
+        ref = parse_reference("Polack FP, et al. Safety and efficacy. N Engl J Med. 2020;383(27):2603-15. "
+                              "PMID: 33301246; PMCID: PMC7745181.")
+        self.assertEqual(ref.other_ids, ["pmid:33301246", "pmcid:PMC7745181"])
+        ref = parse_reference("Devlin, J. et al. BERT. In NAACL, 2019. https://aclanthology.org/N19-1423/")
+        self.assertEqual(ref.other_ids, ["doi:10.18653/v1/N19-1423"])
+
+
+class ArxivIdTest(unittest.TestCase):
+    def test_written_in_several_ways(self):
+        for text in ("arXiv:2309.02427.", "arXiv: 2309.02427v3", "https://arxiv.org/abs/2309.02427v2",
+                     "DOI: 10.48550/arXiv.2309.02427.", "arxiv.org/pdf/2309.02427"):
+            with self.subTest(text=text):
+                self.assertEqual(parse_reference("Sumers, T. (2023). Cognitive architectures. " + text).arxiv_id,
+                                 "2309.02427")
+
+    def test_old_style_and_none(self):
+        self.assertEqual(parse_reference("Maldacena, J. (1997). The large N limit. arXiv:hep-th/9711200.").arxiv_id,
+                         "hep-th/9711200")
+        self.assertIsNone(parse_reference("He, K. (2016). Deep residual learning. CVPR, 770–778.").arxiv_id)
 
 
 class DoiTest(unittest.TestCase):

@@ -27,6 +27,9 @@ _HEADING = re.compile(r"^\s*(references|bibliography|works cited|参考文献)\s
 _TRAILING_HEADING = re.compile(r"^(.*[.!?。)\]])\s*(?:references|bibliography|works cited|参考文献)\s*[:：]?\s*$",
                                re.IGNORECASE)
 _LIST_NUMBER = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
+# What a thesis or paper puts after its reference list: the list ends at the first such heading.
+_AFTER_REFERENCES = re.compile(r"^\s*(?:appendix|appendices|acknowledge?ments?|supplementary\s+(?:materials?|information)"
+                               r"|附录|致谢)\b(?=.{0,80}$)", re.IGNORECASE)
 
 EXTRACT_SYSTEM = """You find the citations in a passage from a manuscript.
 You are given the passage and its numbered reference list. For every place where the passage cites
@@ -67,14 +70,20 @@ def _starts_a_list(line: str) -> bool:
 def split_passage(text: str) -> tuple[str, list[str]]:
     """Split at a "References" (or "参考文献") line: body above, one reference per line below, with
     references that a PDF or a word processor wrapped onto several lines joined back up.
-    A heading at the end of the last sentence counts too, when a reference list follows it."""
+    A heading at the end of the last sentence counts too, when a reference list follows it.
+    The list ends at an appendix or acknowledgments heading."""
     lines = text.splitlines()
+
+    def reference_lines(rest: list[str]) -> list[str]:
+        end = next((n for n, line in enumerate(rest) if _AFTER_REFERENCES.match(line)), len(rest))
+        return join_wrapped(rest[:end])
+
     for i, line in enumerate(lines):
         if _HEADING.match(line):
-            return "\n".join(lines[:i]).strip(), join_wrapped(lines[i + 1:])
+            return "\n".join(lines[:i]).strip(), reference_lines(lines[i + 1:])
     for i, line in enumerate(lines):
         trailing = _TRAILING_HEADING.match(line)
-        rest = join_wrapped(lines[i + 1:])
+        rest = reference_lines(lines[i + 1:])
         if trailing and rest and _starts_a_list(rest[0]):
             return "\n".join([*lines[:i], trailing.group(1)]).strip(), rest
     return text.strip(), []
@@ -223,11 +232,14 @@ def review_passage(text: str, repair: bool = True, emit: Emit | None = None,
         raise ValueError(f"This check takes at most {max_references} references at a time; "
                          f"the text has {len(references)}.")
     emit("start", {"body": body, "references": references})
+    if not body:  # only a reference list: say at once that there are no citations, so the page can say why
+        emit("citations", {"items": []})
 
     existence: list[ExistenceResult | None] = [None] * len(references)
     citations: list[dict] = []
+    reading = llm.available()  # a reference the rules cannot read is read by the model, when there is one
     with ThreadPoolExecutor(max_workers=6) as pool:
-        pending = {pool.submit(check_reference, ref): i for i, ref in enumerate(references)}
+        pending = {pool.submit(check_reference, ref, reading): i for i, ref in enumerate(references)}
         if body:
             pending[pool.submit(find_citations, body, references)] = "citations"
         for future in as_completed(pending):

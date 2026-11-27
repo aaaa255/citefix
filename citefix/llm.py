@@ -42,6 +42,11 @@ def _key() -> str:
     return key
 
 
+def available() -> bool:
+    """Is there a key, so that the model can be asked at all? CITEFIX_MODEL_READING=0 keeps step 1 from asking."""
+    return bool(os.environ.get("DEEPSEEK_API_KEY")) and os.environ.get("CITEFIX_MODEL_READING") != "0"
+
+
 def chat(messages: list[dict], *, model: str = JUDGE_MODEL, tools: list[dict] | None = None,
          json_mode: bool = False, effort: str = JUDGE_EFFORT, max_tokens: int = 4000,
          timeout_s: int = 180) -> tuple[dict, str]:
