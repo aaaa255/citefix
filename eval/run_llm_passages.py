@@ -8,7 +8,7 @@ the same format, such as eval/data/oa_passages.json (introductions of open-acces
   "supported" should pass; one whose list lacks "supported" should be flagged; the rest are borderline.
 - Step 3: every suggestion is printed and saved, to be checked by reading the suggested paper's abstract.
 
-    python eval/run_llm_passages.py [--data FILE] [--no-repair]
+    python eval/run_llm_passages.py [--data FILE] [--no-repair] [--references-only]
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ sys.path.insert(0, str(ROOT))
 
 from citefix import sources  # noqa: E402
 from citefix import llm  # noqa: E402
-from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED  # noqa: E402
+from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, check_many  # noqa: E402
 from citefix.repair import REPLACE, REVISE  # noqa: E402
-from citefix.review import review_passage  # noqa: E402
+from citefix.review import review_passage, split_passage  # noqa: E402
 from citefix.support import SUPPORTED  # noqa: E402
 from citefix.textutil import title_similarity  # noqa: E402
 
@@ -64,6 +64,23 @@ def group(accept: list[str]) -> str:
     return "borderline" if SUPPORTED in accept else "flag"
 
 
+def references_only(passages: list[dict]) -> int:
+    """Step 1 on the labelled references, for checking a change to it without spending model calls."""
+    right = total = 0
+    for passage in passages:
+        _, references = split_passage(passage["text"])
+        results = check_many(references)
+        for ref in passage["references"]:
+            result = results[ref["n"] - 1] if ref["n"] <= len(results) else None
+            verdict = result.verdict if result else "not_checked"
+            ok = verdict in EXPECTED[ref["label"]]
+            right, total = right + ok, total + 1
+            print(f"{'ok  ' if ok else 'MISS'} {passage['id']} [{ref['n']}] {ref['label']:<10} -> {verdict:<11} "
+                  f"{result.reason if result else ''}")
+    print(f"\nstep 1 verdicts as labelled: {rate(right, total)}")
+    return 0
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if os.environ.get("CITEFIX_EVAL_CACHE") != "0":  # look each reference up once a week, not once a run
@@ -71,8 +88,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", default=str(ROOT / "eval" / "data" / "llm_passages.json"))
     parser.add_argument("--no-repair", action="store_true", help="skip step 3")
+    parser.add_argument("--references-only", action="store_true",
+                        help="step 1 alone, on every passage's reference list: no language model is called")
     args = parser.parse_args()
     passages = json.loads(Path(args.data).read_text(encoding="utf-8"))["passages"]
+    if args.references_only:
+        return references_only(passages)
 
     before, started = llm.balance(), time.monotonic()
     with ThreadPoolExecutor(max_workers=2) as pool:  # the web app also runs two checks at a time

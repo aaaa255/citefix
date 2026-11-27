@@ -3,8 +3,10 @@
 import unittest
 from unittest import mock
 
+from citefix.existence import NOT_FOUND, ExistenceResult
 from citefix.repair import CITED, NONE_FOUND, REVISE, Library, check_submission, search
-from citefix.review import apa_reference, split_passage
+from citefix.review import apa_reference, review_passage, split_passage
+from citefix.textutil import parse_reference
 from citefix.sources import Candidate, _clean_markup, _inverted_to_text, _openalex_work
 from citefix.support import PARTIAL, SUPPORTED, SupportResult, quote_in
 
@@ -194,6 +196,24 @@ class SplitPassageTest(unittest.TestCase):
     def test_chinese_heading(self):
         _, refs = split_passage("正文。\n参考文献\n周志华. 机器学习[M]. 2016.")
         self.assertEqual(refs, ["周志华. 机器学习[M]. 2016."])
+
+    def test_the_list_ends_at_an_appendix(self):
+        for heading in ("Appendices", "Appendix A. Earlier experiments", "Acknowledgments", "附录"):
+            with self.subTest(heading=heading):
+                _, refs = split_passage("Claim [1].\n\nReferences\n[1] A. (2020). T.\n[2] B. (2021). U.\n"
+                                        f"{heading}\nChapter 3 ran the experiments below.\n\nTable A.1 lists them.")
+                self.assertEqual(refs, ["[1] A. (2020). T.", "[2] B. (2021). U."])
+
+    def test_only_a_reference_list(self):
+        events = []
+        raw = "[1] Vaswani, A. (2017). Attention is all you need."
+        found = ExistenceResult(raw, parse_reference(raw), NOT_FOUND, "none", None)
+        with mock.patch("citefix.review.check_reference", return_value=found), \
+                mock.patch("citefix.review.find_citations") as find:
+            review_passage("References\n" + raw, emit=lambda kind, data: events.append((kind, data)))
+        self.assertEqual([kind for kind, _ in events[:3]], ["start", "citations", "reference"])
+        self.assertEqual(events[1][1], {"items": []})
+        find.assert_not_called()
 
 
 if __name__ == "__main__":

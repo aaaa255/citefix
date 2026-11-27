@@ -34,7 +34,7 @@ class Scored:
     via: str  # "title": compared with the parsed title; "text": found inside the raw reference
     year_ok: bool | None
     author_ok: bool | None
-    doi_match: bool | None = None  # None when the reference or the record has no DOI
+    doi_match: bool | None = None  # the reference's DOI or arXiv id names this record; None when either has none
 
 
 @dataclass
@@ -82,28 +82,53 @@ def _cut_short(ref: ParsedRef, cand: Candidate) -> bool:
             and f" {full} " in f" {normalize(ref.text)} ")
 
 
+def _identifiers(doi: str | None, arxiv_id: str | None) -> set[str]:
+    """A paper's DOI and its arXiv id, the latter in the DOI form arXiv gives it (10.48550/arxiv.<id>)."""
+    found = {doi.lower()} if doi else set()
+    if arxiv_id:
+        found.add(f"10.48550/arxiv.{arxiv_id.lower()}")
+    return found
+
+
 def score(ref: ParsedRef, cand: Candidate) -> Scored:
-    if ref.title:
-        value, via = title_similarity(ref.title, cand.title), "title"
-        if value < 1.0 and _cut_short(ref, cand):
-            value = 1.0
-    else:
-        value, via = partial_similarity(cand.title, ref.text), "text"
     year_ok = None if ref.year is None or cand.year is None else abs(ref.year - cand.year) <= 1
     author_ok = None
     if ref.first_author and cand.authors:
         author_ok = author_matches(ref.first_author, cand.authors[:3])
-    doi_match = ref.doi.lower() == cand.doi.lower() if ref.doi and cand.doi else None
+    cited, held = _identifiers(ref.doi, ref.arxiv_id), _identifiers(cand.doi, cand.arxiv_id)
+    doi_match = bool(cited & held) if cited and held else None
+    if ref.title:
+        value, via = title_similarity(ref.title, cand.title), "title"
+        if value < 1.0 and _cut_short(ref, cand):
+            value = 1.0
+        # The parser can take the wrong part of a reference for its title, such as a note after the year. A record
+        # that the reference's DOI or arXiv id leads to, or that has its first author, is the same paper when the
+        # reference spells out the record's whole title. Not when that title is only the start of the cited one:
+        # "Attention is all you need" is another paper than "Attention is all you need for graph reasoning".
+        if value < SAME_PAPER and (doi_match or author_ok) and normalize(cand.title) not in normalize(ref.title):
+            loose = partial_similarity(cand.title, ref.text)
+            if loose >= SAME_PAPER:
+                value, via = loose, "text"
+    else:
+        value, via = partial_similarity(cand.title, ref.text), "text"
     return Scored(cand, value, via, year_ok, author_ok, doi_match)
 
 
+def _same_script(ref: ParsedRef, cand: Candidate) -> bool:
+    """Can the titles be compared? Indexes often hold a Chinese paper under its English title."""
+    return not ref.title or bool(_CJK.search(ref.title)) == bool(_CJK.search(cand.title))
+
+
 def _doi_elsewhere(ref: ParsedRef, scored: list[Scored]) -> str | None:
-    """Says so when the reference's DOI leads to a clearly different paper: made-up references
+    """Says so when the reference's DOI or arXiv id leads to a clearly different paper: made-up references
     often pair a real title with some other paper's DOI."""
-    other = next((s.cand for s in scored if s.doi_match and s.via == "title" and s.score < RELATED), None)
+    other = next((s.cand for s in scored
+                  if s.doi_match and s.via == "title" and s.score < RELATED and _same_script(ref, s.cand)), None)
     if other is None:
         return None
-    return f"the DOI {ref.doi} leads to a different paper, “{other.title}”" + (f" ({other.year})" if other.year else "")
+    named = (f"the DOI {ref.doi}" if ref.doi and other.doi and ref.doi.lower() == other.doi.lower()
+             else f"the arXiv id {ref.arxiv_id}")
+    return f"{named} leads to a different paper, “{other.title}”" + (f" ({other.year})" if other.year else "")
 
 
 def _ranking(ref: ParsedRef):
@@ -123,11 +148,29 @@ def _ranking(ref: ParsedRef):
     return rank
 
 
-def decide(ref: ParsedRef, scored: list[Scored]) -> tuple[str, str, Scored | None]:
+UNREGISTERED = "unregistered"  # no DOI agency registered the cited DOI
+OTHER_TITLE = "other_title"  # the agency's page for the DOI shows another title
+REGISTERED = "registered"  # registered, but no index or agency page to compare the title with
+
+
+def _doi_problem(ref: ParsedRef, doi_state: str | None) -> str | None:
+    if doi_state == UNREGISTERED:
+        return f"the DOI {ref.doi} is not registered with any DOI agency"
+    if doi_state == OTHER_TITLE:
+        return f"the page the DOI {ref.doi} leads to does not show this title"
+    return None
+
+
+def decide(ref: ParsedRef, scored: list[Scored], doi_state: str | None = None) -> tuple[str, str, Scored | None]:
+    """doi_state: what the DOI system said about a DOI that no index holds (see _ask_doi_system)."""
+    wrong_doi = _doi_elsewhere(ref, scored) or _doi_problem(ref, doi_state)
     if not scored:
-        return NOT_FOUND, "No index returned any record for this reference.", None
+        if doi_state == REGISTERED:
+            return (SUSPICIOUS, f"The DOI {ref.doi} is registered, but no index holds its record, "
+                                "so its title could not be compared.", None)
+        tail = f"; {wrong_doi}." if wrong_doi else "."
+        return NOT_FOUND, "No index returned any record for this reference" + tail, None
     best = max(scored, key=_ranking(ref))
-    wrong_doi = _doi_elsewhere(ref, scored)
     if best.score >= SAME_PAPER:
         problems = [wrong_doi] if wrong_doi else []
         if best.year_ok is False:
@@ -142,9 +185,16 @@ def decide(ref: ParsedRef, scored: list[Scored]) -> tuple[str, str, Scored | Non
             return SUSPICIOUS, "Paper found, but " + "; ".join(problems) + ".", best
         where = f"DOI {best.cand.doi}" if best.cand.doi else (best.cand.url or "no link")
         return VERIFIED, f"Found in {best.cand.source} ({where}).", best
+    translated = next((s for s in scored if s.doi_match and not _same_script(ref, s.cand)), None)
+    if translated:
+        return (SUSPICIOUS, f"Found by its DOI in {translated.cand.source}, which gives the title in another language "
+                            f"(“{translated.cand.title}”), so the titles could not be compared.", translated)
     tail = f"; {wrong_doi}." if wrong_doi else "."
     if best.score >= RELATED:
         return SUSPICIOUS, f"The closest record only partly matches the title (similarity {best.score:.2f}){tail}", best
+    if doi_state == REGISTERED:
+        return (SUSPICIOUS, f"The DOI {ref.doi} is registered, but no index holds its record, "
+                            "so its title could not be compared.", None)
     return NOT_FOUND, f"No record with a matching title (closest similarity {best.score:.2f}){tail}", best
 
 
@@ -188,25 +238,76 @@ def check_reference(raw: str) -> ExistenceResult:
         first = [("crossref", sources.crossref, ref.text), ("openalex", sources.openalex, ref.text[:200])]
     if ref.doi:
         first.append(("openalex-doi", sources.openalex_doi, ref.doi))
+    # OpenAlex holds arXiv's papers under the DOI arXiv gives them, and answers for one without spending credits.
+    arxiv_doi = f"10.48550/arXiv.{ref.arxiv_id}" if ref.arxiv_id else None
+    if arxiv_doi and (ref.doi or "").lower() != arxiv_doi.lower():
+        first.append(("openalex-arxiv", sources.openalex_doi, arxiv_doi))
     _run(ref, first, trace, scored)
     verdict, reason, match = decide(ref, scored)
 
     # Round 2, only without a clean match: Crossref with the whole reference, arXiv, and OpenAlex
-    # limited to the cited year, which surfaces the right paper when a later one shares its title.
-    if verdict != VERIFIED and ref.title:
-        second = [("crossref", sources.crossref, ref.text), ("arxiv", sources.arxiv, ref.title)]
-        if ref.year:
-            span = (ref.year - 1, ref.year + 1)
-            second.append(("openalex-year", partial(sources.openalex, years=span), ref.title))
-        words = ref.title.split()
-        if len(words) > 8:
-            second.append(("openalex-short", sources.openalex, " ".join(words[:8])))
-        _run(ref, second, trace, scored)
-        verdict, reason, match = decide(ref, scored)
+    # limited to the cited year, which surfaces the right paper when a later one shares its title;
+    # and arXiv by the cited id when OpenAlex does not have that paper yet.
+    if verdict != VERIFIED:
+        second = []
+        if ref.title:
+            second = [("crossref", sources.crossref, ref.text), ("arxiv", sources.arxiv, ref.title)]
+            if ref.year:
+                span = (ref.year - 1, ref.year + 1)
+                second.append(("openalex-year", partial(sources.openalex, years=span), ref.title))
+            words = ref.title.split()
+            if len(words) > 8:
+                second.append(("openalex-short", sources.openalex, " ".join(words[:8])))
+        if ref.arxiv_id and not any(s.doi_match for s in scored):
+            second.append(("arxiv-id", sources.arxiv_by_id, ref.arxiv_id))
+        if second:
+            _run(ref, second, trace, scored)
+            verdict, reason, match = decide(ref, scored)
+
+    # Last, a DOI that no index holds, or holds under a title in another language: the DOI system knows
+    # whether any agency registered it, and China's agency shows the paper's own title.
+    if verdict != VERIFIED and ref.doi and not any(s.doi_match and _same_script(ref, s.cand) for s in scored):
+        doi_state = _ask_doi_system(ref, trace, scored)
+        verdict, reason, match = decide(ref, scored, doi_state)
 
     abstract, abstract_source = _pick_abstract(match, scored, trace)
     return ExistenceResult(raw, ref, verdict, reason, match, trace, round(time.monotonic() - started, 2),
                            abstract, abstract_source)
+
+
+def _ask_doi_system(ref: ParsedRef, trace: list[Lookup], scored: list[Scored]) -> str | None:
+    """Asks the DOI system about a DOI that no index holds. An agency's own page that shows the cited title
+    confirms the paper (China's DOI agency, whose records the indexes lack); a DOI that no agency registered
+    is a mistake. Returns a doi_state for decide(), or None when the page confirmed the title."""
+    step = Lookup(source="doi.org", query=ref.doi)
+    started = time.monotonic()
+    state = page = None
+    try:
+        registered, url = sources.doi_registration(ref.doi)
+    except Exception as err:  # the DOI system being unreachable only means no answer from it
+        step.error, registered, url = str(err) or type(err).__name__, None, None
+    if registered:
+        try:
+            page = sources.doi_record_page(url)
+        except Exception as err:  # nor does an agency page that cannot be read
+            step.error = str(err) or type(err).__name__
+    if registered is False:
+        state = UNREGISTERED
+    elif registered and page is not None:
+        title = ref.title if ref.title and len(normalize(ref.title)) >= 6 else None
+        wanted, text = (normalize(title), normalize(page)) if title else ("", "")
+        # Chinese is written without spaces, so a Chinese title is looked for anywhere in the page.
+        if title and (wanted in text if _CJK.search(title) else f" {wanted} " in f" {text} "):
+            found = score(ref, Candidate("doi.org", title, ref.year, [], doi=ref.doi, url=url))
+            scored.append(found)
+            step.results, step.best_title, step.best_score = 1, title, round(found.score, 3)
+        else:
+            state = OTHER_TITLE if title else REGISTERED
+    elif registered:
+        state = REGISTERED
+    step.ms = int((time.monotonic() - started) * 1000)
+    trace.append(step)
+    return state
 
 
 def _pubmed(doi: str, title: str, trace: list[Lookup]) -> str | None:

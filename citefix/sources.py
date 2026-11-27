@@ -20,7 +20,7 @@ from pathlib import Path
 from .textutil import normalize
 
 USER_AGENT = "citefix-prototype/0.1 (research prototype)"
-TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10, "pubmed": 12}
+TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10, "pubmed": 12, "doi": 12}
 
 Years = tuple[int, int]  # inclusive range of publication years
 _TAGS = re.compile(r"<[^>]+>")
@@ -41,6 +41,7 @@ class Candidate:
     volume: str | None = None
     issue: str | None = None
     pages: str | None = None  # "1929–1958", or one page or article number such as "e308"
+    arxiv_id: str | None = None  # "2304.03442", for a record that came from arXiv
 
 
 class SourceError(Exception):
@@ -106,7 +107,16 @@ _GATES = {
     "semantic_scholar": _Gate(1.1, 1),
     "arxiv": _Gate(3.0, 1),
     "pubmed": _Gate(0.35, 1),
+    "doi": _Gate(0.2, 2),
 }
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):  # a redirect becomes an HTTPError instead of a new request
+        return None
+
+
+_NO_REDIRECTS = urllib.request.build_opener(_NoRedirect)
 
 
 # The same lookups come back again and again: visitors check the example passage, and the agent searches
@@ -178,7 +188,7 @@ def _remember(url: str, body: bytes | None) -> None:
                 out.write(json.dumps({"key": key, "time": now, "body": text}) + "\n")
 
 
-def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes | None:
+def _get(url: str, source: str, headers: dict[str, str] | None = None, follow_redirects: bool = True) -> bytes | None:
     """GET with one retry. Returns None on 404, which these APIs use for "no such record".
     Replies, a 404 included, are cached; errors are not."""
     hit, body = _cached(url)
@@ -186,10 +196,11 @@ def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes 
         return body
     gate = _GATES[source]
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
+    opener = urllib.request.urlopen if follow_redirects else _NO_REDIRECTS.open
     for attempt in (1, 2):
         gate.wait()
         try:
-            with gate.slots, urllib.request.urlopen(request, timeout=TIMEOUT_S[source]) as response:
+            with gate.slots, opener(request, timeout=TIMEOUT_S[source]) as response:
                 body = response.read()
                 gate.follow(response.headers)
         except urllib.error.HTTPError as err:
@@ -451,15 +462,7 @@ _STOP = {
 }
 
 
-def arxiv(text: str, max_results: int = 3, field: str = "ti") -> list[Candidate]:
-    """field "ti" searches titles; "all" also searches abstracts. All words must match."""
-    words = [w for w in normalize(text).split() if len(w) > 2 and w not in _STOP]
-    words = words[:8] if field == "ti" else words[:6]
-    if not words:
-        return []
-    query = " AND ".join(f"{field}:{w}" for w in words)
-    body = _get("https://export.arxiv.org/api/query?"
-                + urllib.parse.urlencode({"search_query": query, "max_results": max_results}), "arxiv")
+def _arxiv_entries(body: bytes | None) -> list[Candidate]:
     if not body:
         return []
     try:
@@ -468,6 +471,9 @@ def arxiv(text: str, max_results: int = 3, field: str = "ti") -> list[Candidate]
         raise SourceError("unreadable reply") from err
     found = []
     for entry in root.findall(f"{_ATOM}entry"):
+        url = entry.findtext(f"{_ATOM}id") or ""
+        if "/api/errors" in url:  # what arXiv answers for an identifier it does not have
+            continue
         published = entry.findtext(f"{_ATOM}published") or ""
         names = [a.findtext(f"{_ATOM}name") or "" for a in entry.findall(f"{_ATOM}author")]
         found.append(Candidate(
@@ -476,9 +482,59 @@ def arxiv(text: str, max_results: int = 3, field: str = "ti") -> list[Candidate]
             year=int(published[:4]) if published[:4].isdigit() else None,
             authors=[n for n in names if n],
             doi=entry.findtext(f"{_ARXIV}doi"),
-            url=entry.findtext(f"{_ATOM}id"),
+            url=url or None,
             venue="arXiv",
             abstract=" ".join((entry.findtext(f"{_ATOM}summary") or "").split()) or None,
             venue_type="repository",
+            arxiv_id=re.sub(r"v\d+$", "", url.split("/abs/", 1)[-1]) if "/abs/" in url else None,
         ))
     return [c for c in found if c.title]
+
+
+def arxiv(text: str, max_results: int = 3, field: str = "ti") -> list[Candidate]:
+    """field "ti" searches titles; "all" also searches abstracts. All words must match."""
+    words = [w for w in normalize(text).split() if len(w) > 2 and w not in _STOP]
+    words = words[:8] if field == "ti" else words[:6]
+    if not words:
+        return []
+    query = " AND ".join(f"{field}:{w}" for w in words)
+    return _arxiv_entries(_get("https://export.arxiv.org/api/query?"
+                               + urllib.parse.urlencode({"search_query": query, "max_results": max_results}), "arxiv"))
+
+
+def arxiv_by_id(arxiv_id: str) -> list[Candidate]:
+    """The paper with this arXiv identifier, or nothing. For papers too new for OpenAlex, which otherwise
+    answers for arXiv's papers by their DOI (10.48550/arXiv.<id>) faster and without arXiv's 3 s pace."""
+    return _arxiv_entries(_get("https://export.arxiv.org/api/query?"
+                               + urllib.parse.urlencode({"id_list": arxiv_id, "max_results": 1}), "arxiv"))[:1]
+
+
+# The DOI system itself knows every DOI, also those of registration agencies whose records no index holds,
+# such as China's (chndoi.org). That agency's resolver page shows the paper's record, so its title can be
+# checked there. Pages are fetched from that host only, without following redirects.
+_DOI_RECORD_PAGES = {"www.chndoi.org", "chndoi.org"}
+
+
+def doi_registration(doi: str) -> tuple[bool | None, str | None]:
+    """(True, address) when an agency registered this DOI, (False, None) when none did, (None, None) when
+    the DOI system gave no clear answer."""
+    body = _get("https://doi.org/api/handles/" + urllib.parse.quote(doi, safe="/:()"), "doi")
+    if body is None:  # 404: the handle does not exist
+        return False, None
+    data = _json(body)
+    if data.get("responseCode") == 100:
+        return False, None
+    if data.get("responseCode") != 1:
+        return None, None
+    url = next((v.get("data", {}).get("value") for v in data.get("values") or [] if v.get("type") == "URL"), None)
+    return True, url if isinstance(url, str) else None
+
+
+def doi_record_page(url: str | None) -> str | None:
+    """The text of a registration agency's page about a paper, when the DOI points to one this module reads."""
+    if not url or (urllib.parse.urlsplit(url).hostname or "").lower() not in _DOI_RECORD_PAGES:
+        return None
+    body = _get(url, "doi", follow_redirects=False)
+    if not body:
+        return None
+    return " ".join(html.unescape(_TAGS.sub(" ", body[:1_000_000].decode("utf-8", "replace"))).split())

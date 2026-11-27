@@ -44,6 +44,62 @@ class ParseReferenceTest(unittest.TestCase):
         self.assertEqual(ref.year, 2014)
 
 
+class FullNamesFirstTest(unittest.TestCase):
+    """Full names, the title, then the venue and year, perhaps a note and an identifier. The sentence after the
+    year is a note here, not the title as in ACM style."""
+
+    def test_title_after_the_names(self):
+        ref = parse_reference("[6]\tJoon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, "
+                              "Michael S. Bernstein. Generative Agents: Interactive Simulacra of Human Behavior. 2023. "
+                              "Read version: v2. DOI: 10.48550/arXiv.2304.03442.")
+        self.assertEqual(ref.title, "Generative Agents: Interactive Simulacra of Human Behavior")
+        self.assertEqual((ref.first_author, ref.year, ref.arxiv_id), ("Park", 2023, "2304.03442"))
+
+    def test_venue_and_year_after_the_title(self):
+        ref = parse_reference("Zhenyu Guan, Xiangyu Kong, Fangwei Zhong, Yizhou Wang. Richelieu: Self-Evolving LLM-Based "
+                              "Agents for AI Diplomacy. NeurIPS, 2024. Main track.")
+        self.assertEqual(ref.title, "Richelieu: Self-Evolving LLM-Based Agents for AI Diplomacy")
+        self.assertEqual(ref.first_author, "Guan")
+
+    def test_et_al_then_the_title(self):
+        ref = parse_reference("Wenyue Hua et al. War and Peace (WarAgent): Large Language Model-based Multi-Agent "
+                              "Simulation of World Wars. 2023. Read: method and results. arXiv:2311.17227.")
+        self.assertEqual(ref.title, "War and Peace (WarAgent): Large Language Model-based Multi-Agent Simulation of World Wars")
+        self.assertEqual((ref.first_author, ref.arxiv_id), ("Hua", "2311.17227"))
+
+    def test_middle_initial_is_not_the_end_of_the_names(self):
+        ref = parse_reference("Theodore R. Sumers, Shunyu Yao, Karthik Narasimhan, Thomas L. Griffiths. Cognitive "
+                              "Architectures for Language Agents. 2023. arXiv:2309.02427.")
+        self.assertEqual(ref.title, "Cognitive Architectures for Language Agents")
+        self.assertEqual(ref.first_author, "Sumers")
+
+    def test_chinese_without_a_type_tag(self):
+        ref = parse_reference("周志华. 机器学习. 北京: 清华大学出版社, 2016.")
+        self.assertEqual((ref.title, ref.first_author, ref.year), ("机器学习", "周志华", 2016))
+
+    def test_acm_year_still_follows_the_names(self):
+        ref = parse_reference("Wenyue Hua, Lizhou Fan, et al. 2023. War and peace (WarAgent): Large language model-based "
+                              "multi-agent simulation of world wars. arXiv.")
+        self.assertEqual(ref.title, "War and peace (WarAgent): Large language model-based multi-agent simulation of world wars")
+
+    def test_a_doi_is_never_the_title(self):
+        self.assertIsNone(parse_reference("Doe, J. 2020. DOI: 10.1234/abcd.5678.").title)
+
+
+class ArxivIdTest(unittest.TestCase):
+    def test_written_in_several_ways(self):
+        for text in ("arXiv:2309.02427.", "arXiv: 2309.02427v3", "https://arxiv.org/abs/2309.02427v2",
+                     "DOI: 10.48550/arXiv.2309.02427.", "arxiv.org/pdf/2309.02427"):
+            with self.subTest(text=text):
+                self.assertEqual(parse_reference("Sumers, T. (2023). Cognitive architectures. " + text).arxiv_id,
+                                 "2309.02427")
+
+    def test_old_style_and_none(self):
+        self.assertEqual(parse_reference("Maldacena, J. (1997). The large N limit. arXiv:hep-th/9711200.").arxiv_id,
+                         "hep-th/9711200")
+        self.assertIsNone(parse_reference("He, K. (2016). Deep residual learning. CVPR, 770–778.").arxiv_id)
+
+
 class DoiTest(unittest.TestCase):
     def test_doi_link_without_the_final_stop(self):
         ref = parse_reference("Piwowar, H. A., Day, R. S., & Fridsma, D. B. (2007). Sharing detailed research data is "

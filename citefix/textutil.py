@@ -12,11 +12,24 @@ _NON_WORD = re.compile(r"[^\w\s]")
 _NUMBERING = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
 
 # Title patterns, tried in order: IEEE puts the title in quotes, APA after "(2017).",
-# ACM after "Author. 2017.", and GB/T 7714 before a type tag such as [J] or [C].
+# ACM after "Author. 2017.", and GB/T 7714 before a type tag such as [J] or [C]. Last, a list of full names
+# then the title: "Joon Sung Park, Michael S. Bernstein. Generative agents: ... 2023." or "周志华. 机器学习. ...".
 _QUOTED_TITLE = re.compile(r"[\"“”](.+?)[,.]?[\"“”]")
 _APA_TITLE = re.compile(r"\((?:19|20)\d{2}[a-z]?(?:,[^)]*)?\)\.\s*(.+?[.?!])(?=\s|$)")
 _ACM_TITLE = re.compile(r"(?:^|[.,]\s)(?:19|20)\d{2}[a-z]?\.\s+(.+?[.?!])(?=\s|$)")
 _GBT_TITLE = re.compile(r"[.．]\s*([^.．\[\]]+?)\s*\[(?:J|M|C|D|R|S|N|P|Z|A|G|EB/OL|J/OL|M/OL|DB/OL)\]")
+_NAME_WORD = r"[A-Z][\w'’-]+"
+# A reference that opens with a full name: "Joon Sung Park,", "Theodore R. Sumers,", "Takuma Yoneda et al." or a
+# Chinese name. (APA's "Vaswani, A." and GB/T's "He K," are not full names.)
+_OPENS_WITH_FULL_NAME = re.compile(rf"^(?:(?:{_NAME_WORD}\s+|[A-Z]\.\s*){{1,3}}{_NAME_WORD}\s*(?:,|\s+et\s+al\b|\s+and\b|\s*&)"
+                                   r"|[一-鿿]{2,4}\s*[,，、.．])")
+_INITIAL = re.compile(r"(?<![\w'’])[A-Z]\.(?=[\s-])")  # "C." in "Joseph C. O'Brien", "M.-W." in "M.-W. Chang"
+_SENTENCE_END = re.compile(r"[.．。!?](?=\s|$)")
+# Not a title: what some styles write after the year, such as a DOI or a link.
+_NOT_A_TITLE = re.compile(r"^(?:doi\b|arxiv\b|https?:|www\.|url\b|available\b|retrieved\b|accessed\b)", re.IGNORECASE)
+# An arXiv identifier, new style (2304.03442) or old (hep-th/9901001), with or without its version.
+_ARXIV_ID = re.compile(r"(?:arXiv:\s?|arxiv\.org/(?:abs|pdf)/|10\.48550/arXiv\.)"
+                       r"(\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?", re.IGNORECASE)
 
 _PAREN_YEAR = re.compile(r"\(((?:19|20)\d{2})[a-z]?(?:,[^)]*)?\)")
 # A bare year, but not one end of a page range (1929–1958) or part of an arXiv id (2010.11929).
@@ -28,6 +41,8 @@ _DOI = re.compile(r"\b10\.\d{4,9}/\S+")
 
 _SURNAME_FIRST = re.compile(r"^([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+)?)\s*,")  # "Vaswani, A." / "Ashish Vaswani,"
 _INITIALS_FIRST = re.compile(r"^(?:[A-Z]\.\s*-?\s*)+([A-Z][\w'’-]+)")  # "K. He," / "M.-W. Chang"
+# "Joon Sung Park,", "Theodore R. Sumers,", "Takuma Yoneda et al.": given names or initials, then the surname.
+_FULL_NAME_FIRST = re.compile(rf"^(?:{_NAME_WORD}\s+|[A-Z]\.\s*){{1,3}}({_NAME_WORD})\s*(?:,|\s+et\s+al\b|\s+and\b|\s*&)")
 _SURNAME_INITIALS = re.compile(r"^([A-Z][\w'’-]+)\s+[A-Z]{1,3}\s*[,.]")  # "He K, Zhang X" (GB/T)
 _CJK_AUTHOR = re.compile(r"^([一-鿿]{2,4})\s*[,，.．、]")  # "周志华." (GB/T, Chinese)
 
@@ -40,6 +55,7 @@ class ParsedRef:
     year: int | None
     first_author: str | None  # surname
     doi: str | None = None
+    arxiv_id: str | None = None  # "2304.03442", without its version
 
 
 def normalize(text: str) -> str:
@@ -50,15 +66,42 @@ def normalize(text: str) -> str:
     return " ".join(_NON_WORD.sub(" ", text.lower()).split())
 
 
+def _only_names(text: str) -> bool:
+    """Is this the start of a reference up to its year in ACM style, an author list with no sentence in it?
+    "Ashish Vaswani, Noam Shazeer, and Illia Polosukhin" is; "Joon Sung Park, ... Michael S. Bernstein.
+    Generative Agents: Interactive Simulacra of Human Behavior" is not: the title came before the year.
+    "et al." may end the list, but a title after it ("Wenyue Hua et al. War and Peace ...") is a sentence."""
+    stripped = _INITIAL.sub(" ", re.sub(r"\bet\s+al\.?\s*$", "", text.strip()))
+    return not _SENTENCE_END.search(stripped)
+
+
+def _title_after_names(text: str) -> str | None:
+    """The title of a reference that opens with full names: the sentence after the first full stop that does
+    not end an initial."""
+    if not _OPENS_WITH_FULL_NAME.match(text):
+        return None
+    for stop in _SENTENCE_END.finditer(text):
+        if text[stop.start()] in ".．" and _INITIAL.match(text, stop.start() - 1):
+            continue  # "C." in "Joseph C. O'Brien"
+        rest = text[stop.end():].lstrip()
+        end = _SENTENCE_END.search(rest)
+        title = (rest[:end.end()] if end else rest).rstrip(".．。").strip()
+        return title or None
+    return None
+
+
 def extract_title(text: str) -> str | None:
     quoted = _QUOTED_TITLE.search(text)
     if quoted and len(quoted.group(1).split()) >= 3:
         return quoted.group(1).strip()
     for pattern in (_APA_TITLE, _ACM_TITLE, _GBT_TITLE):
         found = pattern.search(text)
-        if found:
+        if found and pattern is _ACM_TITLE and not _only_names(text[:found.start()]):
+            continue  # the year came after the title, and what follows it is a note, a venue or a link
+        if found and not _NOT_A_TITLE.match(found.group(1)):
             return found.group(1).rstrip(".").strip()
-    return None
+    title = _title_after_names(text)
+    return title if title and not _NOT_A_TITLE.match(title) else None
 
 
 def extract_year(text: str) -> int | None:
@@ -83,11 +126,16 @@ def extract_doi(text: str) -> str | None:
     return doi or None
 
 
+def extract_arxiv_id(text: str) -> str | None:
+    found = _ARXIV_ID.search(text)
+    return found.group(1) if found else None
+
+
 def first_author_surname(text: str) -> str | None:
     found = _SURNAME_FIRST.match(text)
     if found:
         return found.group(1).split()[-1]
-    for pattern in (_INITIALS_FIRST, _SURNAME_INITIALS, _CJK_AUTHOR):
+    for pattern in (_INITIALS_FIRST, _FULL_NAME_FIRST, _SURNAME_INITIALS, _CJK_AUTHOR):
         found = pattern.match(text)
         if found:
             return found.group(1)
@@ -103,6 +151,7 @@ def parse_reference(raw: str) -> ParsedRef:
         year=extract_year(text),
         first_author=first_author_surname(text),
         doi=extract_doi(text),
+        arxiv_id=extract_arxiv_id(text),
     )
 
 

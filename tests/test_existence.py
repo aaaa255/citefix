@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 from citefix import sources
-from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, _pick_abstract, decide, score
+from citefix.existence import NOT_FOUND, SUSPICIOUS, VERIFIED, _pick_abstract, check_reference, decide, score
 from citefix.sources import Candidate
 from citefix.textutil import parse_reference
 
@@ -138,6 +138,118 @@ class DecideTest(unittest.TestCase):
         self.assertEqual(decide(ref, [score(ref, found)])[0], VERIFIED)
         found.doi = None
         self.assertEqual(decide(ref, [score(ref, found)])[0], SUSPICIOUS)
+
+
+MEMGPT = ("Charles Packer, Sarah Wooders, Kevin Lin, Vivian Fang, Shishir G. Patil, Ion Stoica, Joseph E. Gonzalez. "
+          "MemGPT: Towards LLMs as Operating Systems. 2023. arXiv:2310.08560.")
+MEMGPT_RECORD = Candidate("arxiv", "MemGPT: Towards LLMs as Operating Systems", 2023, ["Charles Packer", "Sarah Wooders"],
+                          arxiv_id="2310.08560")
+
+
+class IdentifierTest(unittest.TestCase):
+    """A record that the reference's own DOI or arXiv id leads to."""
+
+    def test_an_arxiv_id_names_the_record_in_either_form(self):
+        ref = parse_reference(MEMGPT)
+        self.assertTrue(score(ref, MEMGPT_RECORD).doi_match)
+        openalex = Candidate("openalex", MEMGPT_RECORD.title, 2023, ["Charles Packer"], doi="10.48550/arxiv.2310.08560")
+        self.assertTrue(score(ref, openalex).doi_match)
+
+    def test_the_title_written_out_in_the_reference_outweighs_a_wrongly_parsed_one(self):
+        ref = parse_reference(MEMGPT)
+        ref.title = "Read version: v2"  # what the parser once took for the title
+        found = score(ref, MEMGPT_RECORD)
+        self.assertEqual((found.via, found.score), ("text", 1.0))
+        verdict, reason, _ = decide(ref, [found])
+        self.assertEqual(verdict, VERIFIED)
+        self.assertNotIn("different paper", reason)
+
+    def test_without_the_id_or_the_author_it_stays_a_different_title(self):
+        ref = parse_reference(MEMGPT)
+        ref.title = "Read version: v2"
+        other = Candidate("openalex", MEMGPT_RECORD.title, 2023, ["Someone Else"])
+        self.assertLess(score(ref, other).score, 0.75)
+
+    def test_a_longer_cited_title_is_another_paper(self):
+        ref = parse_reference("Vaswani, A., & Parmar, N. (2019). Attention is all you need for graph reasoning. "
+                              "In International Conference on Machine Learning (pp. 6123–6132).")
+        real = Candidate("openalex", "Attention Is All You Need", 2017, ["Ashish Vaswani"])
+        self.assertLess(score(ref, real).score, 0.9)
+
+    def test_an_arxiv_id_that_leads_to_another_paper(self):
+        ref = parse_reference(MEMGPT.replace("2310.08560", "2310.08561"))
+        other = Candidate("arxiv", "Graph Neural Networks for Weather", 2023, ["A. Person"], arxiv_id="2310.08561")
+        verdict, reason, _ = decide(ref, [score(ref, MEMGPT_RECORD), score(ref, other)])
+        self.assertIn("the arXiv id 2310.08561 leads to a different paper", reason)
+        self.assertEqual(verdict, SUSPICIOUS)
+
+
+CHINESE = "余晨, 王立. 大语言模型的引文核查方法研究. 计算机工程, 2026, 52(5): 1–12. DOI: 10.19678/j.issn.1000-3428.0000001."
+
+
+def checked(raw: str, registration, page=None, by_doi=()):
+    """check_reference with no index holding the paper (or only the records by_doi gives for its DOI),
+    and the DOI system's answer given."""
+    with mock.patch("citefix.sources.openalex", return_value=[]), \
+            mock.patch("citefix.sources.openalex_doi", return_value=list(by_doi)), \
+            mock.patch("citefix.sources.crossref", return_value=[]), \
+            mock.patch("citefix.sources.arxiv", return_value=[]), \
+            mock.patch("citefix.sources.arxiv_by_id", return_value=[]), \
+            mock.patch("citefix.sources.pubmed_abstract", return_value=None), \
+            mock.patch("citefix.sources.doi_registration", return_value=registration), \
+            mock.patch("citefix.sources.doi_record_page", return_value=page):
+        return check_reference(raw)
+
+
+class DoiSystemTest(unittest.TestCase):
+    """A DOI that no index holds, such as one from China's DOI agency."""
+
+    def test_the_agency_page_shows_the_title(self):
+        result = checked(CHINESE, (True, "https://www.chndoi.org/Resolution/Handler?doi=10.19678/x"),
+                         "题名 大语言模型的引文核查方法研究 作者 余晨 王立 计算机工程 2026")
+        self.assertEqual(result.verdict, VERIFIED)
+        self.assertIn("doi.org", result.reason)
+
+    def test_the_agency_page_shows_another_title(self):
+        result = checked(CHINESE, (True, "https://www.chndoi.org/Resolution/Handler?doi=10.19678/x"), "题名 另一篇论文")
+        self.assertEqual(result.verdict, NOT_FOUND)
+        self.assertIn("does not show this title", result.reason)
+
+    def test_an_agency_page_that_cannot_be_read_still_counts_the_registration(self):
+        with mock.patch("citefix.sources.openalex", return_value=[]), \
+                mock.patch("citefix.sources.openalex_doi", return_value=[]), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv", return_value=[]), \
+                mock.patch("citefix.sources.pubmed_abstract", return_value=None), \
+                mock.patch("citefix.sources.doi_registration", return_value=(True, "https://www.chndoi.org/x")), \
+                mock.patch("citefix.sources.doi_record_page", side_effect=sources.SourceError("HTTP 302")):
+            result = check_reference(CHINESE)
+        self.assertEqual(result.verdict, SUSPICIOUS)
+        self.assertIn("is registered", result.reason)
+
+    def test_an_unregistered_doi(self):
+        result = checked(CHINESE, (False, None))
+        self.assertEqual(result.verdict, NOT_FOUND)
+        self.assertIn("is not registered with any DOI agency", result.reason)
+
+    def test_registered_but_nowhere_to_read_it(self):
+        result = checked(CHINESE, (True, "https://journal.example/article/1"))
+        self.assertEqual(result.verdict, SUSPICIOUS)
+        self.assertIn("is registered, but no index holds its record", result.reason)
+
+    def test_an_english_title_for_the_doi_is_not_another_paper(self):
+        ref = parse_reference(CHINESE)
+        english = Candidate("openalex", "Research on Citation Checking Methods for Large Language Models", 2026,
+                            ["Chen Yu"], doi="10.19678/j.issn.1000-3428.0000001")
+        verdict, reason, _ = decide(ref, [score(ref, english)])
+        self.assertEqual(verdict, SUSPICIOUS)
+        self.assertIn("gives the title in another language", reason)
+        self.assertNotIn("different paper", reason)
+        # The agency's page, which shows the Chinese title, settles it.
+        result = checked(CHINESE, (True, "https://www.chndoi.org/Resolution/Handler?doi=10.19678/x"),
+                         "大语言模型的引文核查方法研究", by_doi=[english])
+        self.assertEqual(result.verdict, VERIFIED)
+        self.assertIn("doi.org", result.reason)
 
 
 if __name__ == "__main__":
