@@ -145,7 +145,13 @@ function Fix({ pair, demo, t }) {
         <p className="fix-text">{f.rewritten}</p>
         {!f.keeps && <Clamp className="fix-ref" lines={3}>{f.paper.apa}</Clamp>}
         {f.quote && <Clamp as="blockquote" className="evidence is-fix" lines={3}>“{f.quote}”</Clamp>}
-        {f.check && <p className="fix-check">{f.keeps ? t('fix.rewriteCheckOwn', { ref: pair.ref }) : t('fix.rewriteCheckNew')}</p>}
+        {(f.hedge || f.check) && (
+          <p className="fix-check">
+            {[f.hedge && t('fix.mayStillBeRight', { ref: pair.ref }),
+              f.check && (f.keeps ? t('fix.rewriteCheckOwn', { ref: pair.ref }) : t('fix.rewriteCheckNew'))]
+              .filter(Boolean).join(' ')}
+          </p>
+        )}
         {f.explanation && !demo && <Clamp className="why" lines={2}>{f.explanation}</Clamp>}
         {!demo && (
           <div className="fix-actions">

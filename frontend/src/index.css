@@ -3,8 +3,8 @@
 
 /* citefix tokens: cool white and silver, with fluorescent yellow as the one accent.
    The yellow is a highlighter: it fills buttons, selections and the agent's suggestions, and is never used for text
-   on a light ground. Verdict inks only ever mean a verdict: green = supported, orange = partly supported or unclear,
-   red = not supported or missing. Shape rule: controls are pills, containers 20px, pieces inside them 10px. */
+   on a light ground. Verdict inks only ever mean a verdict: green = supported, orange = partly supported, grey = the
+   abstract cannot tell, red = not supported or missing. Shape rule: controls are pills, containers 20px, pieces inside them 10px. */
 
 :root {
   color-scheme: light;
@@ -30,6 +30,9 @@
   --query: #b45309;
   --query-mark: #ef8a00;
   --query-wash: #fff0d9;
+  --unknown: #5f6771;
+  --unknown-mark: #8a939e;
+  --unknown-wash: #eceff2;
   --proof: #e00016;
   --proof-mark: #e00016;
   --proof-wash: #ffe8ea;
@@ -64,6 +67,9 @@
     --query: #ffad42;
     --query-mark: #ffad42;
     --query-wash: #2b1f0e;
+    --unknown: #a3abb5;
+    --unknown-mark: #858e99;
+    --unknown-wash: #1c2026;
     --proof: #ff4f5c;
     --proof-mark: #ff4f5c;
     --proof-wash: #2f1317;
