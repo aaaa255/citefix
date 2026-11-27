@@ -210,6 +210,29 @@ class FieldsTest(unittest.TestCase):
         ref = parse_reference("Y. Bengio, Y. LeCun, and G. Hinton, Nature 521, 436 (2015).")
         self.assertLess(score(ref, DEEP_LEARNING).score, 0.9)
 
+    def test_physics_style_by_year_volume_and_article_number(self):
+        raw = "Alicki R, Fannes M 2013 Phys. Rev. E 87 042123"
+        record = Candidate("openalex", "Entanglement boost for extractable work from ensembles of quantum batteries",
+                           2013, ["Robert Alicki", "Mark Fannes"], doi="10.1103/physreve.87.042123", volume="87",
+                           pages="042123")
+        with mock.patch("citefix.sources.openalex", return_value=[]), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv", return_value=[]), \
+                mock.patch("citefix.sources.pubmed_abstract", return_value=None), \
+                mock.patch("citefix.sources.openalex_by_numbers", return_value=[record]) as by_numbers:
+            result = check_reference(raw)
+        by_numbers.assert_called_once_with(2013, "87", "042123")
+        self.assertEqual((result.verdict, result.match.via), (VERIFIED, "fields"))
+
+    def test_print_year_after_online_year(self):
+        ref = parse_reference("Clarke, R. I., Lee, J. H., & Clark, N. (2017). Why video game genres fail: A "
+                              "classificatory analysis. Games and Culture, 12(5), 445–465.")
+        online = Candidate("openalex", "Why Video Game Genres Fail: A Classificatory Analysis", 2015,
+                           ["Rachel Ivy Clarke"])
+        self.assertEqual(decide(ref, [score(ref, online)])[0], VERIFIED)
+        early = Candidate("openalex", online.title, 2019, ["Rachel Ivy Clarke"])  # cited before it came out
+        self.assertEqual(decide(ref, [score(ref, early)])[0], SUSPICIOUS)
+
     def test_a_record_named_by_a_pubmed_id(self):
         ref = parse_reference("Polack FP, et al. Safety and efficacy. N Engl J Med. 2020;383:2603-15. PMID: 33301246.")
         record = Candidate("openalex", "Safety and Efficacy of the BNT162b2 mRNA Covid-19 Vaccine", 2020,

@@ -17,7 +17,8 @@ from functools import partial
 
 from . import llm, sources
 from .sources import Candidate
-from .textutil import ParsedRef, normalize, parse_reference, partial_similarity, plausible_abstract, title_similarity
+from .textutil import (ParsedRef, normalize, parse_reference, partial_similarity, plausible_abstract, title_similarity,
+                       volume_and_page)
 
 VERIFIED = "verified"
 SUSPICIOUS = "suspicious"
@@ -138,7 +139,9 @@ def _identifiers(doi: str | None, arxiv_id: str | None) -> set[str]:
 def score(ref: ParsedRef, cand: Candidate, named: bool = False) -> Scored:
     """named: the record came from looking up an identifier the reference gives (its DOI, arXiv id or PubMed id),
     so the reference names it, even when the index filed it under its published version's DOI."""
-    year_ok = None if ref.year is None or cand.year is None else abs(ref.year - cand.year) <= 1
+    # A year off by one, or cited up to two years after the record's: journals put papers online a year or two
+    # before the printed issue that references give. A year before the record's cannot be that.
+    year_ok = None if ref.year is None or cand.year is None else -1 <= ref.year - cand.year <= 2
     author_ok = None
     if ref.first_author and cand.authors:
         author_ok = author_matches(ref.first_author, cand.authors[:3])
@@ -318,6 +321,11 @@ def check_reference(raw: str, model: bool = False) -> ExistenceResult:
                 second.append(("openalex-short", sources.openalex, " ".join(words[:8])))
         if ref.arxiv_id and not any(s.doi_match for s in scored):
             second.append(("arxiv-id", sources.arxiv_by_id, ref.arxiv_id, True))
+        # A reference without a title, as physics journals write them, still gives its year, volume and first
+        # page, which together pick out one paper.
+        numbers = volume_and_page(ref.text) if ref.year and not ref.title else None
+        if numbers:
+            second.append(("openalex-numbers", partial(sources.openalex_by_numbers, ref.year, numbers[0]), numbers[1]))
         if second:
             _run(ref, second, trace, scored)
             verdict, reason, match = decide(ref, scored)

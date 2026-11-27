@@ -296,6 +296,12 @@ python -m unittest discover -s tests
 
 改完以后同一份列表：45 条通过，3 条查无此文（2 个软件压缩包和那个未注册的 DOI）。第 1 步的 28 条测试和两组段落的参考文献结论都没有变（`python eval/run_llm_passages.py --references-only` 只跑第 1 步，不调用大模型）。
 
+### 更多格式和真实论文的参考文献（11 月 27 日）
+
+**16 种引用格式。** 用 DOI 系统的格式化服务（各文献管理软件用的官方 CSL 样式）把 19 篇知名论文写成 16 种格式：APA、MLA、Chicago、Harvard、IEEE、AMA、Nature、Science、Cell、ACS、AIP、ACM、Springer、Elsevier、GB/T 7714 和 BibTeX，去掉 DOI；APA 和 IEEE 再各加五种不规范的写法（错字、全小写、没有标点、没有年份、末尾加备注），共 498 条（`eval/data/styles_sample.jsonl`，生成脚本 `eval/make_styles_sample.py`，评测 `python eval/run_styles.py --lookup`）。改之前标题读对 265 条、第一作者读对 366 条；其中 10 种格式的 190 条只找到 76 条。现在能读出这些格式里作者列表后面的标题和 BibTeX 条目，认得带重音的缩写、"de""van"这类姓氏前缀、不带括号的编号；会按 PubMed 编号和 ACL Anthology 地址查找；并参照 Crossref 自己的参考文献匹配方法（先用整条文献检索，再核对记录的字段在不在原文里）：记录的第一作者和年份出现在文献里，再加上大部分标题，或者卷号和起始页，就算同一篇。改之后标题读对 442 条、第一作者 417 条；190 条找到 188 条，不规范的 APA 95 条从 65 条到 77 条；前后都没有把文献认成别的论文。所有办法都找不到时，现在还可以让大模型读这条文献，但它只能照抄文献里的内容，抄出来的东西文献里没有就丢掉，所以它只能帮着检索，不能自己编标题。
+
+**真实论文的参考文献列表。** 出版社会把论文的参考文献交给 Crossref，有些连同印出来的原文和每条对应的 DOI 一起交。取了 2024 到 2026 年 12 篇论文的 182 条：Scientific Reports、Humanities and Social Sciences Communications、物理学报、Sustainability、ACM Computing Surveys 和 Journal of Economic Perspectives，同样去掉 DOI（`eval/data/real_refs.jsonl`，生成脚本 `eval/make_real_refs.py`，评测 `python eval/run_real_refs.py`）。第一次找对 142 条。物理学报的格式不写标题（"Alicki R, Fannes M 2013 Phys. Rev. E 87 042123"），而 Crossref 把 Physical Review 的页码存在"文章编号"里，citefix 没读。现在这种文献会按年份、卷号和起始页去 OpenAlex 查，年份取作者后面那个，不再取后面像年份的页码；先在线发表、一两年后才印进期刊的论文，按印刷年份引用也不再判可疑。改之后 182 条找对 166 条。认成"另一篇"的 7 条里，有 5 条其实是 citefix 对、出版社交的 DOI 错（一个 DOI 多了一位数字；两条物理文献写的卷号和页码，正是 citefix 找到的那篇）；1 条是问卷的数据库记录和介绍它的论文之争；1 条引的是一本书，citefix 匹配成了同一批作者的一章。其余没找到的，多半是出版社把两条文献切错了位置。第 1 步的测试集、两组段落和开发者自己的列表结论都没有变。
+
 ## 计划
 
 - [x] 第 1 步：文献是否存在

@@ -18,10 +18,12 @@ _NUMBERING = re.compile(r"^\s*(?:\[\d{1,3}\]|\(\d{1,3}\)|\d{1,3}[.)])\s+")
 # learning."; Nature and ACS: "LeCun, Y., Bengio, Y. & Hinton, G. Deep learning."), initials and surname
 # (Science: "Y. LeCun, Y. Bengio, G. Hinton, Deep learning.") or Chinese names ("周志华. 机器学习. ...").
 _UP = "[A-ZÀ-ÖØ-ÞĀ-ſ]"  # a capital, accented ones too ("Ö." in "Türeci, Ö.", "Ł" in "Łukasz")
-_NAME_WORD = rf"{_UP}[\w'’-]+"
+# A surname may open with a lower-case particle: "de Man, F. M.", "van Schaik R", "van der Maaten, L."
+_PARTICLE = r"(?:(?:van|von|de|da|di|du|del|della|den|der|le|la|ten|ter|dos|das)\s+)"
+_NAME_WORD = rf"{_PARTICLE}*{_UP}[\w'’-]+"
 _INITIALS = rf"(?:{_UP}\.\s?-?\s?)+"
 _TITLE = r"(.+?(?:[.?!](?=[\s,]|$)|$))"  # up to the end of its sentence, or of the reference
-_QUOTED_TITLE = re.compile(r"[\"“”](.+?)[,.]?[\"“”]")
+_QUOTED_TITLE = re.compile(r"[\"“”](\S.+?)[,.]?[\"“”]")  # not from a stray closing quote: `Topic." Journal ...`
 _SINGLE_QUOTED_TITLE = re.compile(r"‘(.+?)[,.]?’(?=[\s,.:;]|$)")  # the ’ of "Don’t" does not end it
 _APA_TITLE = re.compile(r"\((?:19|20)\d{2}[a-z]?(?:,[^)]*)?\)[.:]?\s+" + _TITLE)
 _ACM_TITLE = re.compile(r"(?:^|[.,]\s)(?:19|20)\d{2}[a-z]?\.\s+(.+?[.?!])(?=\s|$)")
@@ -40,9 +42,19 @@ _SURNAME_GIVEN_LIST = re.compile(  # MLA books: "Hastie, Trevor, et al. The Elem
     rf"(?:,\s+et\s+al|,?\s+and\s+{_NAME_WORD}(?:\s(?:{_NAME_WORD}|{_UP}\.))*)?\.\s+(?=[A-Z0-9])" + _TITLE)
 # A venue, volume and pages, not a title: "Nature 521, 436 (2015)" in styles that leave the title out.
 _VENUE_NUMBERS = re.compile(r"\b\d+\s*[,:]\s*\d+|\((?:19|20)\d{2}\)")
-# What styles add after a title: "(Version 7)", "[Internet]", or a book's "(Springer New York, 2009)".
+# What styles add after a title: "(Version 7)", "[Internet]", a book's "(Springer New York, 2009)", or the
+# translation of a title in another language: "Update Chemoperfusion [Update on chemoinfusion]".
 _TITLE_TAIL = re.compile(r"\s*(?:[\[(](?:version\s*\d+|v\d+|internet|online|preprint|e-?print|pdf)[\])]"
-                         r"|\([^()]*\b(?:19|20)\d{2}\))\s*$", re.IGNORECASE)
+                         r"|\([^()]*\b(?:19|20)\d{2}\)|\[[^\[\]]{3,}\])\s*$", re.IGNORECASE)
+# The year right after the authors, as physics journals write it ("Namiki T 1999 IEEE Trans. Microw. Theory Tech.
+# 47 2003"), where a later number can look like a year.
+_YEAR_AFTER_NAMES = re.compile(
+    rf"^(?:{_NAME_WORD}(?:\s{_NAME_WORD})?\s(?:{_UP}{{1,3}}\s?)+,\s)*{_NAME_WORD}(?:\s{_NAME_WORD})?"
+    rf"\s(?:{_UP}{{1,3}}\s?)+(?:,?\s*et\s+al\.?)?\s+((?:19|20)\d{{2}})\b")
+# The volume and first page (or article number) that close a reference: "Phys. Rev. E 87 042123",
+# "Nature 521, 436 (2015).", "Sci. Adv. 8 eabk3160", "Theory Tech.47 2003".
+_VOLUME_PAGE = re.compile(r"(?<!\d)(\d{1,4})\s*(?:\(\d{1,4}\))?\s*[,:]?\s+(?:pp?\.?\s*)?([A-Za-z]{0,4}\d{2,7})"
+                          r"(?:\s*[-–]\s*\d+)?\s*(?:\((?:19|20)\d{2}\))?\s*\.?$")
 _BIBTEX_FIELD = r"\b{}\s*=\s*(?:\{{((?:[^{{}}]|\{{[^{{}}]*\}})*)\}}|\"([^\"]*)\"|(\d+))"
 # A reference that opens with a full name: "Joon Sung Park,", "Theodore R. Sumers,", "Takuma Yoneda et al." or a
 # Chinese name. (APA's "Vaswani, A." and GB/T's "He K," are not full names.)
@@ -80,7 +92,8 @@ _INITIALS_FIRST = re.compile(rf"^(?:{_UP}\.\s*-?\s*)+({_NAME_WORD})")  # "K. He,
 # "Albert Bandura. 1977.": given names or initials, then the surname.
 _FULL_NAME_FIRST = re.compile(rf"^(?:{_NAME_WORD}\s+|{_UP}\.\s*){{1,3}}({_NAME_WORD})"
                               r"\s*(?:,|\s+et\s+al\b|\s+and\b|\s*&|\.\s+(?=(?:19|20)\d{2}\b))")
-_SURNAME_INITIALS = re.compile(rf"^({_NAME_WORD})\s+(?:{_UP}{{1,3}}\s?){{1,3}}[,.]")  # "He K, Zhang X", "PARK J S,"
+# "He K, Zhang X", "PARK J S,", and alone before a physics-style year: "Namiki T 1999 ..."
+_SURNAME_INITIALS = re.compile(rf"^({_NAME_WORD})\s+(?:{_UP}{{1,3}}\s?){{1,3}}(?:[,.]|(?=(?:19|20)\d{{2}}\b))")
 _CJK_AUTHOR = re.compile(r"^([一-鿿]{2,4})\s*[,，.．、]")  # "周志华." (GB/T, Chinese)
 
 
@@ -177,8 +190,17 @@ def _find_title(text: str) -> str | None:
     return None
 
 
+def volume_and_page(text: str) -> tuple[str, str] | None:
+    """The volume and first page a reference ends with, for finding one that gives no title."""
+    found = _VOLUME_PAGE.search(text.strip())
+    return (found.group(1), found.group(2)) if found else None
+
+
 def extract_year(text: str) -> int | None:
     text = _NOTE_DATE.sub(" ", text)
+    after_names = _YEAR_AFTER_NAMES.match(text)
+    if after_names:
+        return int(after_names.group(1))
     paren = _PAREN_YEAR.search(text)
     if paren:
         return int(paren.group(1))

@@ -1,7 +1,7 @@
 import unittest
 
 from citefix.textutil import (extract_doi, join_wrapped, normalize, parse_reference, partial_similarity,
-                              plausible_abstract, title_similarity)
+                              plausible_abstract, title_similarity, volume_and_page)
 
 
 class ParseReferenceTest(unittest.TestCase):
@@ -133,6 +133,26 @@ class StylesTest(unittest.TestCase):
             with self.subTest(text=text[:40]):
                 ref = parse_reference(text)
                 self.assertEqual((ref.title, ref.first_author), (title, author))
+
+    def test_physics_style(self):
+        ref = parse_reference("Namiki T 1999 IEEE Trans. Microw. Theory Tech.47 2003")
+        self.assertEqual((ref.title, ref.first_author, ref.year), (None, "Namiki", 1999))  # 2003 is the page
+        self.assertEqual(volume_and_page(ref.text), ("47", "2003"))
+        ref = parse_reference("Quach J Q, McGhee K E, Virgili T 2022 Sci. Adv. 8 eabk3160")
+        self.assertEqual((ref.first_author, ref.year, volume_and_page(ref.text)), ("Quach", 2022, ("8", "eabk3160")))
+
+    def test_surname_particles_and_translated_titles(self):
+        ref = parse_reference("de Man, F. M., Goey, A. K. L. & Bins, S. Individualization of irinotecan treatment: "
+                              "A review. Clin. Pharmacokinet. 57, 1229–1254 (2018).")
+        self.assertEqual((ref.title, ref.first_author), ("Individualization of irinotecan treatment: A review", "Man"))
+        ref = parse_reference("Lubienski, A. et al. Update Chemoperfusion und -embolisation [Update on chemoinfusion "
+                              "and chemoembolization treatments]. Radiologe (2007).")
+        self.assertEqual(ref.title, "Update Chemoperfusion und -embolisation")
+
+    def test_a_stray_quote_from_the_reference_before(self):
+        ref = parse_reference('Mentorship." Management Science 72 (6): 4610-32. Starr, Evan. 2019. "Consider This: '
+                              'Training, Wages, and the Enforceability of Covenants Not to Compete." ILR Review 72 (4).')
+        self.assertTrue(ref.title.startswith("Consider This"))
 
     def test_a_note_date_is_not_the_year(self):
         ref = parse_reference("K. He et al., “Deep residual learning for image recognition,” in Proc. CVPR, 2016, "

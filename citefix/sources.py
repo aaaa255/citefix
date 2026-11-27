@@ -294,7 +294,7 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
     params = {
         "query.bibliographic": query,
         "rows": rows,
-        "select": "DOI,title,author,issued,container-title,type,URL,abstract,volume,issue,page",
+        "select": "DOI,title,author,issued,container-title,type,URL,abstract,volume,issue,page,article-number",
     }
     if years:
         params["filter"] = f"from-pub-date:{years[0]},until-pub-date:{years[1]}"
@@ -309,7 +309,7 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
         date_parts = (item.get("issued") or {}).get("date-parts") or [[None]]
         names = [" ".join(p for p in (a.get("given"), a.get("family")) if p) or a.get("name") or ""
                  for a in item.get("author", [])]
-        page = item.get("page") or ""
+        page = item.get("page") or item.get("article-number") or ""  # Physical Review gives "042123" as the latter
         found.append(Candidate(
             source="crossref",
             title=title,
@@ -381,6 +381,15 @@ def openalex(query: str, years: Years | None = None, per_page: int = 5) -> list[
     if years:
         params["filter"] = f"publication_year:{years[0]}-{years[1]}"
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode(_openalex_params(params))
+    return [c for c in map(_openalex_work, _json(_get(url, "openalex")).get("results", [])) if c]
+
+
+def openalex_by_numbers(year: int, volume: str, page: str) -> list[Candidate]:
+    """Works from this year with this volume and first page (or article number): what a reference without a
+    title, as physics journals write them ("Alicki R, Fannes M 2013 Phys. Rev. E 87 042123"), gives to go by."""
+    filters = f"publication_year:{year},biblio.volume:{volume},biblio.first_page:{page}"
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(
+        _openalex_params({"filter": filters, "per-page": 5, "select": _OPENALEX_FIELDS}))
     return [c for c in map(_openalex_work, _json(_get(url, "openalex")).get("results", [])) if c]
 
 
