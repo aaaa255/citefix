@@ -269,6 +269,48 @@ class FieldsTest(unittest.TestCase):
         self.assertTrue(result.match.doi_match)
 
 
+ASHWAL = Candidate("crossref", "Risk factors for postpartum hemorrhage following cesarean delivery", 2022,
+                   ["Eran Ashwal", "Ron Bergel Bson", "Amir Aviram"], doi="10.1080/14767058.2020.1834533",
+                   volume="35", issue="18", pages="3626-3630")
+# A real paper's authors, year, journal, volume and pages under another paper's title.
+MIXED = parse_reference("Ashwal E, Bergel Bson R, Aviram A, Hadar E, Yogev Y, Hiersch L. Heart transplantation in "
+                        "the cyclosporine era. J Matern Fetal Neonatal Med. 2022;35(18):3626-30.")
+
+
+class MixedDetailsTest(unittest.TestCase):
+    """The record's author, year, volume and page vouch for a reference only when it gives no title of its own
+    that is clearly another: made-up references are often a real paper's details under another title."""
+
+    def test_another_title_on_a_real_papers_details_is_suspicious(self):
+        found = score(MIXED, ASHWAL)
+        self.assertEqual(found.via, "details")
+        self.assertLess(found.score, 0.9)
+        verdict, reason, match = decide(MIXED, [found])
+        self.assertEqual(verdict, SUSPICIOUS)
+        self.assertIn("Risk factors for postpartum hemorrhage following cesarean delivery", reason)
+        self.assertIs(match, found)
+
+    def test_the_paper_with_that_title_is_named_too(self):
+        titled = Candidate("openalex", "Heart transplantation in the cyclosporine era", 1988, ["Philip E. Oyer"])
+        verdict, reason, match = decide(MIXED, [score(MIXED, ASHWAL), score(MIXED, titled)])
+        self.assertEqual(verdict, SUSPICIOUS)
+        self.assertIn("Risk factors for postpartum hemorrhage", reason)
+        self.assertIn("Philip E. Oyer", reason)
+        self.assertIs(match.cand, titled)
+
+    def test_the_papers_own_title_verifies(self):
+        ref = parse_reference(MIXED.raw.replace("Heart transplantation in the cyclosporine era", ASHWAL.title))
+        self.assertEqual(decide(ref, [score(ref, ASHWAL)])[0], VERIFIED)
+
+    def test_a_short_misread_title_does_not_count_as_another(self):
+        ref = parse_reference("I. Aref’eva, K. Rannu, and P. Slepov, Phys. Lett. B 792, 470 (2019).")
+        self.assertEqual(ref.title, "Phys")  # the journal's name, taken for the title
+        record = Candidate("crossref", "Orientation dependence of confinement-deconfinement phase transition in "
+                           "anisotropic media", 2019, ["Irina Aref’eva", "Kristina Rannu", "Pavel Slepov"],
+                           volume="792", pages="470-475")
+        self.assertEqual(decide(ref, [score(ref, record)])[0], VERIFIED)
+
+
 def checked_book(raw: str, books=(), by_isbn=(), found=()):
     """check_reference with OpenAlex, Crossref and arXiv finding `found` (or nothing) and Open Library `books`."""
     with mock.patch("citefix.sources.openalex", return_value=list(found)), \

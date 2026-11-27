@@ -26,6 +26,7 @@ NOT_FOUND = "not_found"
 
 SAME_PAPER = 0.90  # title similarity at or above this counts as the same paper
 RELATED = 0.75  # below this, the closest record is a different paper
+DIFFERENT_TITLE = 0.50  # below this, a title the reference gives is another paper's, not the record's misspelt
 
 _CJK = re.compile(r"[一-鿿]+")
 _PREPRINT = re.compile(r"\b(?:arxiv|biorxiv|medrxiv|chemrxiv|ssrn|corr|preprint)\b", re.IGNORECASE)
@@ -36,7 +37,8 @@ class Scored:
     cand: Candidate
     score: float
     via: str  # "title": compared with the parsed title; "text": found inside the raw reference;
-    # "fields": the record's author, year and title or volume and page are in the reference (_fields_agree)
+    # "fields": the record's author, year and title or volume and page are in the reference (_fields_agree);
+    # "details": its author, year, volume and page are, but the reference gives another title (_cites_other_title)
     year_ok: bool | None
     author_ok: bool | None
     doi_match: bool | None = None  # the reference's DOI or arXiv id names this record; None when either has none
@@ -103,29 +105,41 @@ def _first_number(value: str | None) -> str | None:
     return (found.group(0).lstrip("0") or "0") if found else None
 
 
-def _fields_agree(ref: ParsedRef, cand: Candidate) -> bool:
+def _fields_agree(ref: ParsedRef, cand: Candidate) -> str | None:
     """Crossref's way of confirming a match without parsing the reference: the record's details are in it.
     The record's first author must be the reference's (or, when none was read, open it), and its year must be
-    there, with either most of its title or both its volume and first page. This finds references in styles
-    that leave the title out (AIP: "Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436 (2015).") and ones
-    whose title the parser could not tell apart, without letting a made-up title by a real author through."""
+    there, with either most of its title ("title") or both its volume and first page ("numbers"). This finds
+    references in styles that leave the title out (AIP: "Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436
+    (2015).") and ones whose title the parser could not tell apart. None when the details do not agree."""
     if not cand.authors or not cand.year:
-        return False
+        return None
     first = cand.authors[0]
     surname = normalize(first.split(",")[0] if "," in first else (first.split() or [""])[-1])
     if ref.first_author:
         if not author_matches(ref.first_author, [first]):
-            return False
+            return None
     elif len(surname) < 2 or surname not in normalize(ref.text).split()[:3]:
-        return False
+        return None
     numbers = _numbers_in(ref)
     if not {str(cand.year - 1), str(cand.year), str(cand.year + 1)} & numbers:
-        return False
+        return None
     whole, cited = normalize(cand.title), normalize(ref.title or "")
     # Most of the title: but a record whose title is only the start of the cited one is another paper.
-    title_seen = partial_similarity(cand.title, ref.text) >= 0.75 and not (cited and whole != cited and whole in cited)
+    if partial_similarity(cand.title, ref.text) >= 0.75 and not (cited and whole != cited and whole in cited):
+        return "title"
     volume, page = _first_number(cand.volume), _first_number(cand.pages)
-    return title_seen or bool(volume and page and volume != page and {volume, page} <= numbers)
+    return "numbers" if volume and page and volume != page and {volume, page} <= numbers else None
+
+
+def _cites_other_title(ref: ParsedRef, cand: Candidate) -> bool:
+    """Does the reference give a title of its own that is clearly not the record's? Made-up references are often
+    a real paper's author, year, journal, volume and pages under another paper's title, and a real paper is
+    sometimes cited under the title of another. A few words do not count, since the parser can take a journal's
+    name or a note for the title ("Phys", "Vol"), and nor does a title in another script, which cannot be compared."""
+    if not ref.title or len(normalize(ref.title).split()) < 4 or not _same_script(ref, cand):
+        return False
+    return max(title_similarity(ref.title, cand.title),
+               title_similarity(main_title(ref.title), main_title(cand.title))) < DIFFERENT_TITLE
 
 
 def _identifiers(doi: str | None, arxiv_id: str | None) -> set[str]:
@@ -166,8 +180,13 @@ def score(ref: ParsedRef, cand: Candidate, named: bool = False) -> Scored:
     if (value < SAME_PAPER and cand.venue_type == "book" and author_ok and ref.title
             and normalize(cand.title) == normalize(main_title(ref.title))):
         value, via = SAME_PAPER, "title"
-    if value < SAME_PAPER and _fields_agree(ref, cand):
-        value, via = SAME_PAPER, "fields"
+    if value < SAME_PAPER:
+        agreed = _fields_agree(ref, cand)
+        # The record's volume and page vouch for the reference only when it does not name another paper.
+        if agreed == "title" or (agreed == "numbers" and not _cites_other_title(ref, cand)):
+            value, via = SAME_PAPER, "fields"
+        elif agreed == "numbers":
+            via = "details"
     return Scored(cand, value, via, year_ok, author_ok, doi_match)
 
 
@@ -227,6 +246,24 @@ def _doi_problem(ref: ParsedRef, doi_state: str | None) -> str | None:
 
 def decide(ref: ParsedRef, scored: list[Scored], doi_state: str | None = None) -> tuple[str, str, Scored | None]:
     """doi_state: what the DOI system said about a DOI that no index holds (see _ask_doi_system)."""
+    verdict, reason, match = _decide(ref, scored, doi_state)
+    details = [s for s in scored if s.via == "details"] if verdict != VERIFIED else []
+    titled = match if match is not None and match.score >= SAME_PAPER else None
+    if not details or (titled is not None and titled.author_ok is not False):
+        return verdict, reason, match
+    # A real paper's first author, year, volume and page, under the title of another paper or of none in any index:
+    # how made-up references are often built. Saying which paper the details belong to shows it.
+    real = max(details, key=lambda s: (s.cand.doi is not None, s.author_ok is True, s.year_ok is True))
+    where = f"DOI {real.cand.doi}" if real.cand.doi else (real.cand.url or real.cand.source)
+    said = f"The first author, year, volume and page are those of “{real.cand.title}” ({real.cand.year}, {where})"
+    if titled is not None:
+        others = ", ".join(titled.cand.authors[:2]) or "other authors"
+        return (SUSPICIOUS, f"{said}, but the title is that of a paper by {others} ({titled.cand.year}): "
+                            "the details of two papers are mixed.", titled)
+    return SUSPICIOUS, f"{said}, which has another title.", real
+
+
+def _decide(ref: ParsedRef, scored: list[Scored], doi_state: str | None = None) -> tuple[str, str, Scored | None]:
     wrong_doi = _doi_elsewhere(ref, scored) or _doi_problem(ref, doi_state)
     if not scored:
         if doi_state == REGISTERED:

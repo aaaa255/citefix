@@ -94,5 +94,19 @@ class DiskCacheTest(unittest.TestCase):
             net.assert_not_called()
 
 
+class TitleMarkupTest(unittest.TestCase):
+    """Records' titles can carry JATS or MathML markup, sometimes escaped, which would spoil the comparison."""
+
+    def test_an_escaped_formula_is_dropped(self):
+        title = ('Visual Classification by &lt;inline-formula&gt;&lt;tex-math notation="LaTeX"&gt;$\\ell _1$'
+                 '&lt;/tex-math&gt;&lt;alternatives&gt;&lt;inline-graphic xlink:href="a.gif"/&gt;&lt;/alternatives&gt;'
+                 '&lt;/inline-formula&gt;-Hypergraph Modeling')
+        self.assertEqual(sources._clean_title(title), "Visual Classification by -Hypergraph Modeling")
+
+    def test_inline_markup_and_plain_signs(self):
+        self.assertEqual(sources._clean_title("CO<sub>2</sub> capture in <i>vitro</i>"), "CO2 capture in vitro")
+        self.assertEqual(sources._clean_title("Effects at p < 0.05 &amp; q > 1"), "Effects at p < 0.05 & q > 1")
+
+
 if __name__ == "__main__":
     unittest.main()

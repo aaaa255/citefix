@@ -25,6 +25,17 @@ TIMEOUT_S = {"crossref": 12, "openalex": 12, "semantic_scholar": 12, "arxiv": 10
 
 Years = tuple[int, int]  # inclusive range of publication years
 _TAGS = re.compile(r"<[^>]+>")
+_TITLE_TAGS = re.compile(r"</?[A-Za-z][\w:.-]*(?:\s[^<>]*)?/?>")
+_TEX_COPY = re.compile(r"<tex-math\b[^>]*>.*?</tex-math>", re.DOTALL)
+
+
+def _clean_title(title: str) -> str:
+    """A record's title as readers see it. Some come with JATS or MathML markup, at times escaped
+    ("&lt;inline-formula&gt;"); a formula's TeX copy is dropped so that it is not read twice."""
+    if "<" not in title and "&" not in title:
+        return title
+    title = _TEX_COPY.sub(" ", html.unescape(title))
+    return " ".join(html.unescape(_TITLE_TAGS.sub("", title)).split())
 
 
 @dataclass
@@ -306,7 +317,7 @@ def crossref(query: str, years: Years | None = None, rows: int = 5) -> list[Cand
     data = _json(_get("https://api.crossref.org/works?" + urllib.parse.urlencode(params), "crossref"))
     found = []
     for item in data.get("message", {}).get("items", []):
-        title = (item.get("title") or [""])[0]
+        title = _clean_title((item.get("title") or [""])[0])
         if not title or item.get("type") in _CROSSREF_CONTAINERS:
             continue
         date_parts = (item.get("issued") or {}).get("date-parts") or [[None]]
@@ -360,7 +371,7 @@ def _openalex_work(work: dict) -> Candidate | None:
     names = [_printed_name(a) for a in work.get("authorships") or []]
     cand = Candidate(
         source="openalex",
-        title=work.get("display_name") or "",
+        title=_clean_title(work.get("display_name") or ""),
         year=work.get("publication_year"),
         authors=[n for n in names if n],
         doi=doi,
