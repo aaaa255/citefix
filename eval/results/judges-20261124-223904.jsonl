@@ -1,0 +1,258 @@
+{"model": "deepseek-flash", "run": 1, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 1, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 1, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 1, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 2, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 2, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 2, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 3, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 3, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-flash", "run": 3, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-flash", "run": 3, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 1, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 2, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01-1", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01-2", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01-3", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01-4", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01-5", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02-1", "group": "flag", "accept": ["partially_supported", "not_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02-2", "group": "flag", "accept": ["partially_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02-4", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02-5", "group": "flag", "accept": ["insufficient_evidence", "partially_supported", "not_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p03-1", "group": "flag", "accept": ["partially_supported", "insufficient_evidence"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p03-2", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p03-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p03-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p04-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported"], "verdict": "insufficient_evidence"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p04-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p04-3", "group": "pass", "accept": ["supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p04-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p04-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p05-1", "group": "flag", "accept": ["partially_supported", "not_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p05-2", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p05-3", "group": "flag", "accept": ["not_supported", "insufficient_evidence"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p05-4", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p05-5", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p06-1", "group": "flag", "accept": ["insufficient_evidence", "not_supported", "partially_supported"], "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p06-2", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p06-3", "group": "flag", "accept": ["partially_supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p06-4", "group": "borderline", "accept": ["supported", "partially_supported"], "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p06-5", "group": "borderline", "accept": ["partially_supported", "supported"], "verdict": "partially_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s01", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s02", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s03", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s04", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s05", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "s06", "group": "pass", "accept": null, "verdict": "supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u02", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u03", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u04", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u05", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "u06", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p01", "group": "flag", "accept": null, "verdict": "not_supported"}
+{"model": "deepseek-v4-pro", "run": 3, "id": "p02", "group": "flag", "accept": null, "verdict": "partially_supported"}

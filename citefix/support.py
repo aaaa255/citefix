@@ -48,9 +48,12 @@ def quote_in(quote: str, text: str) -> bool:
     return q in t or (len(q.split()) >= 4 and partial_similarity(quote, text) >= 0.9)
 
 
-def judge_support(claim: str, title: str, abstract: str, year: int | None = None) -> SupportResult:
+def judge_support(claim: str, title: str, abstract: str, year: int | None = None,
+                  model: str | None = None) -> SupportResult:
+    """model overrides CITEFIX_JUDGE_MODEL, for comparing judges."""
     paper = f"{title} ({year})" if year else title
-    answer = llm.ask_json(SYSTEM, f"Claim: {claim}\n\nCited paper: {paper}\nAbstract: {abstract}")
+    answer = llm.ask_json(SYSTEM, f"Claim: {claim}\n\nCited paper: {paper}\nAbstract: {abstract}",
+                          model=model or llm.JUDGE_MODEL)
     verdict = answer.get("verdict") if answer.get("verdict") in VERDICTS else UNCLEAR
     quote = str(answer.get("quote") or "").strip()
     explanation = str(answer.get("explanation") or "").strip()

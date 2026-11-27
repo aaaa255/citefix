@@ -18,6 +18,7 @@ from .existence import NOT_FOUND, SUSPICIOUS, VERIFIED, check_many
 from .repair import REPLACE, REVISE
 from .sources import key_hint
 from .support import PARTIAL, SUPPORTED, UNCLEAR, UNSUPPORTED
+from .textutil import join_wrapped
 
 LABELS = {VERIFIED: "VERIFIED", SUSPICIOUS: "SUSPICIOUS", NOT_FOUND: "NOT FOUND"}
 SUPPORT_LABELS = {SUPPORTED: "SUPPORTED", PARTIAL: "PARTLY SUPPORTED", UNSUPPORTED: "NOT SUPPORTED",
@@ -29,8 +30,8 @@ def read_text(path: str) -> str:
 
 
 def read_references(path: str) -> list[str]:
-    return [line.strip() for line in read_text(path).splitlines()
-            if line.strip() and not line.lstrip().startswith("#")]
+    """One reference per line; a reference wrapped onto several lines is joined back up."""
+    return join_wrapped([line for line in read_text(path).splitlines() if not line.lstrip().startswith("#")])
 
 
 def print_check(results, trace: bool) -> None:

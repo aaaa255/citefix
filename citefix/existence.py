@@ -14,7 +14,7 @@ from functools import partial
 
 from . import sources
 from .sources import Candidate
-from .textutil import ParsedRef, normalize, parse_reference, partial_similarity, title_similarity
+from .textutil import ParsedRef, normalize, parse_reference, partial_similarity, plausible_abstract, title_similarity
 
 VERIFIED = "verified"
 SUSPICIOUS = "suspicious"
@@ -222,7 +222,7 @@ def _pubmed(doi: str, title: str, trace: list[Lookup]) -> str | None:
         step.results, step.best_title = 1, found[0]
         step.best_score = round(title_similarity(found[0], title), 3)
     trace.append(step)
-    return found[1] if found and step.best_score >= SAME_PAPER else None
+    return found[1] if found and step.best_score >= SAME_PAPER and plausible_abstract(found[0], found[1]) else None
 
 
 def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Lookup]) -> tuple[str | None, str | None]:
@@ -233,7 +233,8 @@ def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Looku
     year = match.cand.year
     versions = [s for s in (match, *scored) if s.score >= SAME_PAPER
                 and (year is None or s.cand.year is None or abs(s.cand.year - year) <= 1)]
-    same = [s for s in versions if s.cand.abstract]
+    # An index sometimes holds a README or the acknowledgments as the abstract; skip those.
+    same = [s for s in versions if plausible_abstract(s.cand.title, s.cand.abstract)]
     if same:
         best = max(same, key=lambda s: s.score)
         return best.cand.abstract, best.cand.source
@@ -248,7 +249,7 @@ def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Looku
         return None, None  # already asked arXiv for exactly this title
     try:
         for cand in sources.arxiv(title):
-            if cand.abstract and title_similarity(cand.title, title) >= SAME_PAPER:
+            if title_similarity(cand.title, title) >= SAME_PAPER and plausible_abstract(cand.title, cand.abstract):
                 return cand.abstract, "arxiv"
     except Exception:
         pass

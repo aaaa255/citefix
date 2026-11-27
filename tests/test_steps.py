@@ -3,7 +3,7 @@
 import unittest
 from unittest import mock
 
-from citefix.repair import CITED, NONE_FOUND, REVISE, Library, check_submission
+from citefix.repair import CITED, NONE_FOUND, REVISE, Library, check_submission, search
 from citefix.review import apa_reference, split_passage
 from citefix.sources import Candidate, _clean_markup, _inverted_to_text, _openalex_work
 from citefix.support import PARTIAL, SUPPORTED, SupportResult, quote_in
@@ -198,3 +198,69 @@ class SplitPassageTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+DIFFUSION = ("We show that diffusion probabilistic models, latent variable models trained to reverse a gradual "
+             "noising process, produce high quality image samples on standard benchmarks.")
+
+
+def preprint():
+    return Candidate("arxiv", "Denoising Diffusion Probabilistic Models", 2020, ["Jonathan Ho", "Ajay Jain"],
+                     doi="10.48550/arXiv.2006.11239", venue="arXiv", venue_type="repository", abstract=DIFFUSION)
+
+
+def proceedings():
+    return Candidate("crossref", "Denoising diffusion probabilistic models", 2020, ["Ho, Jonathan"],
+                     venue="Advances in Neural Information Processing Systems", venue_type="conference")
+
+
+class VersionTest(unittest.TestCase):
+    """A preprint and its published version are one paper: suggest the published one."""
+
+    def test_the_published_details_with_the_preprints_abstract(self):
+        library = Library()
+        pid = library.add(preprint())
+        self.assertEqual(library.add(proceedings()), pid)
+        paper = library.papers[pid]
+        self.assertEqual((paper.venue_type, paper.abstract), ("conference", DIFFUSION))
+
+    def test_in_either_order(self):
+        library = Library()
+        pid = library.add(proceedings())
+        self.assertEqual(library.add(preprint()), pid)
+        self.assertEqual(library.papers[pid].venue, "Advances in Neural Information Processing Systems")
+        self.assertEqual(library.papers[pid].abstract, DIFFUSION)
+
+    def test_another_paper_with_the_same_title_stays_apart(self):
+        library = Library()
+        other = Candidate("openalex", "Denoising Diffusion Probabilistic Models", 2023, ["Maria Lopez"],
+                          venue_type="journal", abstract=DIFFUSION)
+        self.assertNotEqual(library.add(preprint()), library.add(other))
+
+    def test_a_search_shows_one_record_with_the_published_venue(self):
+        with mock.patch("citefix.sources.openalex", return_value=[proceedings()]),                 mock.patch("citefix.sources.arxiv", return_value=[preprint()]),                 mock.patch("citefix.sources.crossref", return_value=[]):
+            results, errors = search(Library(), "denoising diffusion", None)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["venue"], "Advances in Neural Information Processing Systems")
+        self.assertEqual(results[0]["abstract"], DIFFUSION)
+
+    def test_arxiv_is_not_asked_when_openalex_gives_enough(self):
+        records = [Candidate("openalex", f"Diffusion models {n}", 2021, [f"Author {n}"], abstract=DIFFUSION)
+                   for n in "ABC"]
+        with mock.patch("citefix.sources.openalex", return_value=records), \
+                mock.patch("citefix.sources.crossref") as crossref, \
+                mock.patch("citefix.sources.arxiv") as arxiv:
+            results, _ = search(Library(), "denoising diffusion", None)
+        crossref.assert_not_called()
+        arxiv.assert_not_called()
+        self.assertEqual(len(results), 3)
+
+    def test_arxiv_is_searched_in_full_when_openalex_fails(self):
+        with mock.patch("citefix.sources.openalex", side_effect=OSError("rate-limited")), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv", return_value=[preprint()]) as arxiv:
+            results, errors = search(Library(), "denoising diffusion", None)
+        self.assertEqual(arxiv.call_args.kwargs.get("field"), "all")
+        self.assertEqual([r["title"] for r in results], ["Denoising Diffusion Probabilistic Models"])
+        self.assertTrue(errors[0].startswith("openalex"))

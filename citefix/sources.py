@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import os
@@ -12,7 +13,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections import OrderedDict
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .textutil import normalize
 
@@ -106,8 +109,81 @@ _GATES = {
 }
 
 
+# The same lookups come back again and again: visitors check the example passage, and the agent searches
+# for the same papers. Replies are kept in memory for CITEFIX_CACHE_HOURS (default 6; 0 turns this off),
+# at most _CACHE_SIZE of them, dropping the least recently used. Evaluation runs also keep them in a file
+# (use_disk_cache), since they look up the same references run after run.
+_CACHE_HOURS = float(os.environ.get("CITEFIX_CACHE_HOURS") or 6)
+_CACHE_SIZE = 500
+_cache: OrderedDict[str, tuple[float, bytes | None]] = OrderedDict()
+_cache_lock = threading.Lock()
+_cache_file: Path | None = None
+_API_KEY = re.compile(r"(?<=[?&])api_key=[^&]*&?")
+
+
+def _cache_key(url: str) -> str:
+    """A hash of the request without its API key, so that no key reaches a cache file."""
+    return hashlib.sha256(_API_KEY.sub("", url).encode("utf-8")).hexdigest()
+
+
+def use_disk_cache(path: str | Path, hours: float = 24 * 7) -> None:
+    """Keep replies in this file as well as in memory, for `hours`: for evaluation runs, which would
+    otherwise spend the OpenAlex budget looking up the same references again in every run."""
+    global _cache_file, _CACHE_HOURS, _CACHE_SIZE
+    _cache_file, _CACHE_HOURS, _CACHE_SIZE = Path(path), hours, 1_000_000
+    _cache_file.parent.mkdir(parents=True, exist_ok=True)
+    if not _cache_file.exists():
+        return
+    with _cache_lock:
+        for line in _cache_file.read_text(encoding="utf-8").splitlines():
+            try:
+                entry = json.loads(line)
+                body = entry["body"].encode("utf-8") if entry["body"] is not None else None
+                _cache[entry["key"]] = (entry["time"], body)
+            except (ValueError, KeyError, AttributeError):
+                continue
+
+
+def _cached(url: str) -> tuple[bool, bytes | None]:
+    """(True, reply) when a fresh reply to this URL is in memory, else (False, None)."""
+    if _CACHE_HOURS <= 0:
+        return False, None
+    key = _cache_key(url)
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry is None:
+            return False, None
+        if time.time() - entry[0] > _CACHE_HOURS * 3600:
+            del _cache[key]
+            return False, None
+        _cache.move_to_end(key)
+        return True, entry[1]
+
+
+def _remember(url: str, body: bytes | None) -> None:
+    if _CACHE_HOURS <= 0:
+        return
+    key, now = _cache_key(url), time.time()
+    with _cache_lock:
+        _cache[key] = (now, body)
+        _cache.move_to_end(key)
+        while len(_cache) > _CACHE_SIZE:
+            _cache.popitem(last=False)
+        if _cache_file is not None:
+            try:
+                text = body.decode("utf-8") if body is not None else None
+            except UnicodeDecodeError:
+                return
+            with _cache_file.open("a", encoding="utf-8") as out:
+                out.write(json.dumps({"key": key, "time": now, "body": text}) + "\n")
+
+
 def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes | None:
-    """GET with one retry. Returns None on 404, which these APIs use for "no such record"."""
+    """GET with one retry. Returns None on 404, which these APIs use for "no such record".
+    Replies, a 404 included, are cached; errors are not."""
+    hit, body = _cached(url)
+    if hit:
+        return body
     gate = _GATES[source]
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
     for attempt in (1, 2):
@@ -119,6 +195,7 @@ def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes 
         except urllib.error.HTTPError as err:
             if err.code == 404:
                 gate.note_success()
+                _remember(url, None)
                 return None
             if err.code == 429:
                 retry_after = _seconds(err.headers.get("Retry-After"))
@@ -138,6 +215,7 @@ def _get(url: str, source: str, headers: dict[str, str] | None = None) -> bytes 
                 continue
             raise SourceError(str(reason)) from err
         gate.note_success()
+        _remember(url, body)
         return body
     raise SourceError("no response")
 

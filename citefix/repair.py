@@ -12,15 +12,15 @@ either the paper already cited (then the sentence keeps its citation) or one fro
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from . import llm, sources
 from .sources import Candidate
 from .support import PARTIAL, SUPPORTED, judge_support, quote_in
-from .textutil import normalize
+from .textutil import normalize, plausible_abstract, title_similarity
 
 REPLACE = "replace"
 REVISE = "revise_claim"
@@ -100,50 +100,106 @@ class Library:
             self.add(cited, CITED)
 
     def add(self, cand: Candidate, pid: str | None = None) -> str:
+        """The id of this paper, merging it with a record of the same paper already here (see _merge)."""
         key = normalize(cand.title)
         known = self._by_title.get(key)
-        if known is None:
-            if pid is None:
-                self._found += 1
-                pid = f"P{self._found}"
-            self._by_title[key] = known = pid
-            self.papers[pid] = cand
-        elif cand.abstract and not self.papers[known].abstract:
-            self.papers[known] = cand
-        return known
+        if known is not None and _same_work(self.papers[known], cand):
+            self.papers[known] = _merge(self.papers[known], cand)
+            return known
+        if pid is None:
+            self._found += 1
+            pid = f"P{self._found}"
+        self._by_title.setdefault(key, pid)
+        self.papers[pid] = cand
+        return pid
+
+
+def _published(cand: Candidate) -> bool:
+    return cand.venue_type in ("journal", "conference")
+
+
+def _same_work(a: Candidate, b: Candidate) -> bool:
+    """Two records with one title are one paper when their first authors share a name."""
+    if not a.authors or not b.authors:
+        return True
+    names = [{w for w in normalize(c.authors[0]).split() if len(w) > 1} for c in (a, b)]
+    return bool(names[0] & names[1])
+
+
+def _merge(kept: Candidate, new: Candidate) -> Candidate:
+    """One record for two versions of a paper: the published version's details, so that a suggestion
+    names the journal or proceedings rather than a preprint, and the abstract the agent may already have
+    seen, else the other version's when it is a real one."""
+    details = new if _published(new) and not _published(kept) else kept
+    abstract = next((c.abstract for c in (kept, new) if plausible_abstract(c.title, c.abstract)), details.abstract)
+    return dataclasses.replace(details, abstract=abstract)
+
+
+ARXIV_FILL = 2  # at most this many records are looked up on arXiv per search
+ENOUGH = 3  # OpenAlex results with an abstract that make asking Crossref as well unnecessary
+
+
+def _maybe_on_arxiv(cand: Candidate) -> bool:
+    """A preprint, or conference proceedings, whose papers are often on arXiv too."""
+    return (cand.venue_type in ("repository", "conference") or "arxiv" in (cand.venue or "").lower()
+            or (cand.doi or "").lower().startswith("10.48550/"))
+
+
+def _arxiv_copies(cands: list[Candidate]) -> tuple[list[Candidate], list[str]]:
+    """arXiv's copies of the leading preprint or proceedings records that came without a usable abstract.
+    OpenAlex covers arXiv, so a full arXiv search is not needed, but arXiv's own copy has the real abstract
+    where OpenAlex holds none or the wrong text. arXiv asks for 3 s between calls, which made a full search
+    there the slowest part of every search. Journal papers without an abstract are seldom on arXiv, so they
+    are not looked up."""
+    missing = [c for c in cands if _maybe_on_arxiv(c) and not plausible_abstract(c.title, c.abstract)][:ARXIV_FILL]
+    copies: list[Candidate] = []
+    for cand in missing:
+        try:
+            copies += [a for a in sources.arxiv(cand.title, max_results=2)
+                       if title_similarity(a.title, cand.title) >= 0.9]
+        except Exception as err:
+            return copies, [f"arxiv: {err}"]
+    return copies, []
 
 
 def search(library: Library, query: str, years: sources.Years | None) -> tuple[list[dict], list[str]]:
-    lookups = {
-        "openalex": lambda: sources.openalex(query, years=years, per_page=6),
-        "arxiv": lambda: sources.arxiv(query, max_results=6, field="all"),
-        "crossref": lambda: sources.crossref(query, years=years, rows=6),  # has abstracts for some papers
-    }
+    """OpenAlex first. Crossref (one request a second) only when OpenAlex gives fewer than ENOUGH papers
+    with an abstract, and arXiv only for the leading records that lack one; but a full arXiv search when
+    OpenAlex fails or the two together still come up short, since OpenAlex is where arXiv's papers are
+    otherwise found."""
     found: list[Candidate] = []
     errors: list[str] = []
 
-    def run(name):
+    def usable() -> int:
+        return sum(plausible_abstract(c.title, c.abstract) for c in found)
+    for name, lookup in (("openalex", lambda: sources.openalex(query, years=years, per_page=6)),
+                         ("crossref", lambda: sources.crossref(query, years=years, rows=6))):
+        if name == "crossref" and usable() >= ENOUGH:
+            break
         try:
-            return lookups[name](), None
+            found += lookup()
         except Exception as err:
-            return [], f"{name}: {err}"
-
-    with ThreadPoolExecutor(max_workers=len(lookups)) as pool:
-        for cands, error in pool.map(run, lookups):
-            found += cands
-            if error:
-                errors.append(error)
+            errors.append(f"{name}: {err}")
+    if usable() < ENOUGH or any(e.startswith("openalex") for e in errors):
+        try:
+            found += sources.arxiv(query, max_results=6, field="all")
+        except Exception as err:
+            errors.append(f"arxiv: {err}")
+    copies, arxiv_errors = _arxiv_copies(found)
+    found += copies
+    errors += arxiv_errors
     results: list[dict] = []
     for cand in found:
-        if not cand.abstract:
-            continue  # the agent cannot judge a paper without its abstract
         if years and cand.year and not years[0] <= cand.year <= years[1]:
             continue
-        pid = library.add(cand)
+        pid = library.add(cand)  # a preprint and its published version become one record
+        paper = library.papers[pid]
+        if not plausible_abstract(paper.title, paper.abstract):
+            continue  # no abstract, or one that is really a README or acknowledgments: nothing to judge
         if any(r["id"] == pid for r in results):
             continue
-        results.append({"id": pid, "title": cand.title, "year": cand.year, "authors": cand.authors[:3],
-                        "venue": cand.venue, "abstract": cand.abstract[:1500]})
+        results.append({"id": pid, "title": paper.title, "year": paper.year, "authors": paper.authors[:3],
+                        "venue": paper.venue, "abstract": paper.abstract[:1500]})
     return results[:8], errors
 
 
