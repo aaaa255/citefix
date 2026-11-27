@@ -1,7 +1,7 @@
 import unittest
 
-from citefix.textutil import (extract_doi, join_wrapped, parse_reference, partial_similarity, plausible_abstract,
-                              title_similarity)
+from citefix.textutil import (extract_doi, join_wrapped, normalize, parse_reference, partial_similarity,
+                              plausible_abstract, title_similarity)
 
 
 class ParseReferenceTest(unittest.TestCase):
@@ -84,6 +84,89 @@ class FullNamesFirstTest(unittest.TestCase):
 
     def test_a_doi_is_never_the_title(self):
         self.assertIsNone(parse_reference("Doe, J. 2020. DOI: 10.1234/abcd.5678.").title)
+
+
+class StylesTest(unittest.TestCase):
+    """One paper as the common citation styles write it (rendered by the DOI system's CSL styles)."""
+
+    def test_title_in_each_style(self):
+        for style, text in (
+            ("vancouver", "LeCun Y, Bengio Y, Hinton G. Deep learning. Nature. 2015;521(7553):436-444."),
+            ("nature", "LeCun, Y., Bengio, Y. & Hinton, G. Deep learning. Nature 521, 436–444 (2015)."),
+            ("acs", "LeCun, Y.; Bengio, Y.; Hinton, G. Deep Learning. Nature 2015, 521 (7553), 436–444."),
+            ("science", "Y. LeCun, Y. Bengio, G. Hinton, Deep learning. Nature 521, 436–444 (2015)."),
+            ("springer", "LeCun Y, Bengio Y, Hinton G (2015) Deep learning. Nature 521:436–444."),
+            ("harvard", "LeCun, Y., Bengio, Y. and Hinton, G. (2015) ‘Deep learning’, Nature, 521(7553), pp. 436–444."),
+            ("mla", "LeCun, Yann, et al. “Deep Learning.” Nature, vol. 521, no. 7553, 2015, pp. 436–44."),
+            ("elsevier", "LeCun, Y., Bengio, Y., Hinton, G., 2015. Deep learning. Nature 521, 436–444."),
+            ("ieee, no quotes", "Y. LeCun, Y. Bengio, and G. Hinton, Deep learning, in Proc. Nature, 2015, pp. 436–444."),
+        ):
+            with self.subTest(style=style):
+                ref = parse_reference(text)
+                self.assertEqual(normalize(ref.title or ""), "deep learning")
+                self.assertEqual((ref.first_author, ref.year), ("LeCun", 2015))
+
+    def test_details_of_real_lists(self):
+        for text, title, author in (
+            ("1 Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” Nature 521(7553), 436–444 (2015).",
+             "Deep learning", "LeCun"),  # AIP numbers its list without brackets
+            ("Park JS, O’Brien J, Cai CJ, et al (2023) Generative Agents: Interactive Simulacra of Human Behavior. "
+             "Proceedings of UIST.", "Generative Agents: Interactive Simulacra of Human Behavior", "Park"),
+            ("PARK J S, O’BRIEN J, CAI C J, et al. Generative Agents: Interactive Simulacra of Human Behavior[C]. "
+             "UIST, 2023.", "Generative Agents: Interactive Simulacra of Human Behavior", "PARK"),
+            ("Park, J.S., O’Brien, J., Cai, C.J., Bernstein, M.S., 2023. Generative Agents: Interactive Simulacra of "
+             "Human Behavior. Proceedings of UIST.", "Generative Agents: Interactive Simulacra of Human Behavior", "Park"),
+            ("Polack, F. P.; Pérez Marc, G.; Türeci, Ö.; Gruber, W. C. Safety and Efficacy of the BNT162b2 mRNA "
+             "Covid-19 Vaccine. N. Engl. J. Med. 2020, 383 (27), 2603–2615.",
+             "Safety and Efficacy of the BNT162b2 mRNA Covid-19 Vaccine", "Polack"),
+            ("Albert Bandura. 1977. Self-efficacy: Toward a unifying theory of behavioral change. Psychological "
+             "Review 84, 2 (1977), 191–215.", "Self-efficacy: Toward a unifying theory of behavioral change", "Bandura"),
+            ("Vaswani, A., Shazeer, N., & Polosukhin, I. (2017). Attention Is All You Need (Version 7). arXiv.",
+             "Attention Is All You Need", "Vaswani"),
+            ("Vaswani A, Shazeer N, Parmar N, et al (2017) Attention Is All You Need", "Attention Is All You Need",
+             "Vaswani"),
+            ("Hastie, Trevor, et al. The Elements of Statistical Learning. Springer Series in Statistics, 2009.",
+             "The Elements of Statistical Learning", "Hastie"),
+            ("1 T. Hastie, R. Tibshirani, and J. Friedman, The Elements of Statistical Learning (Springer New York, 2009).",
+             "The Elements of Statistical Learning", "Hastie"),
+        ):
+            with self.subTest(text=text[:40]):
+                ref = parse_reference(text)
+                self.assertEqual((ref.title, ref.first_author), (title, author))
+
+    def test_a_note_date_is_not_the_year(self):
+        ref = parse_reference("K. He et al., “Deep residual learning for image recognition,” in Proc. CVPR, 2016, "
+                              "pp. 770–778. Accessed 12 March 2026.")
+        self.assertEqual(ref.year, 2016)
+
+    def test_gbt_with_any_type_tag(self):
+        ref = parse_reference("VASWANI A, SHAZEER N, PARMAR N, et al. Attention Is All You Need[A/OL]. arXiv, 2017.")
+        self.assertEqual(ref.title, "Attention Is All You Need")
+
+    def test_a_venue_with_numbers_is_not_a_title(self):
+        ref = parse_reference("Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436 (2015).")  # AIP leaves out titles
+        self.assertIsNone(ref.title)
+        self.assertEqual(ref.first_author, "LeCun")
+
+    def test_bibtex(self):
+        ref = parse_reference("@article{LeCun_2015, title={Deep {L}earning}, volume={521}, journal={Nature}, "
+                              "author={LeCun, Yann and Bengio, Yoshua}, year={2015}, doi={10.1038/nature14539}}")
+        self.assertEqual((ref.title, ref.first_author, ref.year, ref.doi),
+                         ("Deep Learning", "LeCun", 2015, "10.1038/nature14539"))
+
+    def test_bibtex_entries_over_several_lines(self):
+        lines = ["@article{a,", "  title={Deep learning},", "  author={LeCun, Yann},", "}",
+                 "@inproceedings{b,", "  title = {Attention is all you need},", "}"]
+        self.assertEqual(len(join_wrapped(lines)), 2)
+
+
+class OtherIdsTest(unittest.TestCase):
+    def test_pubmed_ids_and_acl_anthology(self):
+        ref = parse_reference("Polack FP, et al. Safety and efficacy. N Engl J Med. 2020;383(27):2603-15. "
+                              "PMID: 33301246; PMCID: PMC7745181.")
+        self.assertEqual(ref.other_ids, ["pmid:33301246", "pmcid:PMC7745181"])
+        ref = parse_reference("Devlin, J. et al. BERT. In NAACL, 2019. https://aclanthology.org/N19-1423/")
+        self.assertEqual(ref.other_ids, ["doi:10.18653/v1/N19-1423"])
 
 
 class ArxivIdTest(unittest.TestCase):

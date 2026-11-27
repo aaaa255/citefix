@@ -184,6 +184,81 @@ class IdentifierTest(unittest.TestCase):
         self.assertEqual(verdict, SUSPICIOUS)
 
 
+DEEP_LEARNING = Candidate("crossref", "Deep learning", 2015, ["Yann LeCun", "Yoshua Bengio", "Geoffrey Hinton"],
+                          doi="10.1038/nature14539", volume="521", issue="7553", pages="436–444")
+
+
+class FieldsTest(unittest.TestCase):
+    """Crossref's check without parsing: the record's author, year and volume and page, or most of its title,
+    are in the reference."""
+
+    def test_a_style_without_titles(self):
+        ref = parse_reference("Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436 (2015).")
+        found = score(ref, DEEP_LEARNING)
+        self.assertEqual((found.via, found.score), ("fields", 0.9))
+        self.assertEqual(decide(ref, [found])[0], VERIFIED)
+
+    def test_a_title_with_typos(self):
+        ref = parse_reference("LeCun Y, Bengio Y, Hinton G. Deep lerning by representaton. Nature. 2015;521:436-44.")
+        self.assertEqual(score(ref, DEEP_LEARNING).via, "fields")
+
+    def test_another_page_and_title_by_the_same_author_is_not_it(self):
+        ref = parse_reference("LeCun, Y. (2015). Self-supervised folding of protein graphs. Nature, 521, 1203–1210.")
+        self.assertLess(score(ref, DEEP_LEARNING).score, 0.9)
+
+    def test_another_first_author_is_not_it(self):
+        ref = parse_reference("Y. Bengio, Y. LeCun, and G. Hinton, Nature 521, 436 (2015).")
+        self.assertLess(score(ref, DEEP_LEARNING).score, 0.9)
+
+    def test_a_record_named_by_a_pubmed_id(self):
+        ref = parse_reference("Polack FP, et al. Safety and efficacy. N Engl J Med. 2020;383:2603-15. PMID: 33301246.")
+        record = Candidate("openalex", "Safety and Efficacy of the BNT162b2 mRNA Covid-19 Vaccine", 2020,
+                           ["Fernando P. Polack"])
+        with mock.patch("citefix.sources.openalex", return_value=[]), \
+                mock.patch("citefix.sources.crossref", return_value=[]), \
+                mock.patch("citefix.sources.arxiv", return_value=[]), \
+                mock.patch("citefix.sources.pubmed_abstract", return_value=None), \
+                mock.patch("citefix.sources.openalex_by_id", return_value=[record]) as by_id:
+            result = check_reference(ref.raw)
+        by_id.assert_any_call("pmid:33301246")
+        self.assertTrue(result.match.doi_match)
+
+
+MESSY = "lecun yann / bengio y / hinton g -- deep learning -- nature vol 521 2015 pp 436"
+
+
+def read_by_model(answer: dict, title_search=()):
+    """check_reference with the model's reading given, and OpenAlex answering a title search with title_search."""
+    searched = []
+
+    def openalex(query, **kwargs):  # only a search for the title itself finds the paper
+        searched.append(query)
+        return list(title_search) if query.strip().lower() == "deep learning" else []
+    with mock.patch("citefix.existence.llm.ask_json", return_value=answer), \
+            mock.patch("citefix.sources.openalex", side_effect=openalex), \
+            mock.patch("citefix.sources.crossref", return_value=[]), \
+            mock.patch("citefix.sources.arxiv", return_value=[]), \
+            mock.patch("citefix.sources.pubmed_abstract", return_value=None):
+        return check_reference(MESSY, model=True), searched
+
+
+class ModelReadingTest(unittest.TestCase):
+    """A reference in no style the rules know: the model copies out its parts, which steer the search."""
+
+    def test_the_copied_title_finds_the_paper(self):
+        result, searched = read_by_model({"title": "deep learning", "first_author_surname": "lecun", "year": "2015"},
+                                         [DEEP_LEARNING])
+        self.assertIn("deep learning", searched)
+        self.assertEqual(result.verdict, VERIFIED)
+
+    def test_a_title_not_in_the_reference_is_ignored(self):
+        result, searched = read_by_model({"title": "Deep Learning: Methods and Applications", "year": "2015"},
+                                         [DEEP_LEARNING])
+        self.assertNotIn("Deep Learning: Methods and Applications", searched)
+        self.assertNotEqual(result.verdict, VERIFIED)
+        self.assertEqual(result.trace[-1].source, "model-reading")
+
+
 CHINESE = "余晨, 王立. 大语言模型的引文核查方法研究. 计算机工程, 2026, 52(5): 1–12. DOI: 10.19678/j.issn.1000-3428.0000001."
 
 

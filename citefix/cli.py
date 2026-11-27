@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         if not references:
             print("No references found in the input.", file=sys.stderr)
             return 1
-        results = check_many(references)
+        results = check_many(references, model=llm.available())
         if args.json:
             print(json.dumps([r.to_dict() for r in results], ensure_ascii=False, indent=2))
             return 0

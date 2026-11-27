@@ -386,7 +386,13 @@ def openalex(query: str, years: Years | None = None, per_page: int = 5) -> list[
 
 def openalex_doi(doi: str) -> list[Candidate]:
     """The work with this DOI, or nothing. Fetching one work costs no OpenAlex credits; a search does."""
-    url = (f"https://api.openalex.org/works/doi:{urllib.parse.quote(doi, safe='/')}?"
+    return openalex_by_id(f"doi:{doi}")
+
+
+def openalex_by_id(key: str) -> list[Candidate]:
+    """The work with this id ("doi:10.1038/...", "pmid:26017442", "pmcid:PMC4589826"), or nothing; free too."""
+    kind, _, value = key.partition(":")
+    url = (f"https://api.openalex.org/works/{kind}:{urllib.parse.quote(value, safe='/')}?"
            + urllib.parse.urlencode(_openalex_params({"select": _OPENALEX_FIELDS})))
     work = _json(_get(url, "openalex"))
     cand = _openalex_work(work) if work else None

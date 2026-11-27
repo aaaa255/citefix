@@ -237,8 +237,9 @@ def review_passage(text: str, repair: bool = True, emit: Emit | None = None,
 
     existence: list[ExistenceResult | None] = [None] * len(references)
     citations: list[dict] = []
+    reading = llm.available()  # a reference the rules cannot read is read by the model, when there is one
     with ThreadPoolExecutor(max_workers=6) as pool:
-        pending = {pool.submit(check_reference, ref): i for i, ref in enumerate(references)}
+        pending = {pool.submit(check_reference, ref, reading): i for i, ref in enumerate(references)}
         if body:
             pending[pool.submit(find_citations, body, references)] = "citations"
         for future in as_completed(pending):

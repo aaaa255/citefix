@@ -2,17 +2,20 @@
 
 Existence is decided only from records that scholarly indexes return, never from a
 language model's memory: made-up references are exactly what language models produce.
+A model may help read a reference the rules cannot (check_reference's model option), but only
+by copying parts of it, which then serve as search queries.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from functools import partial
 
-from . import sources
+from . import llm, sources
 from .sources import Candidate
 from .textutil import ParsedRef, normalize, parse_reference, partial_similarity, plausible_abstract, title_similarity
 
@@ -31,7 +34,8 @@ _PREPRINT = re.compile(r"\b(?:arxiv|biorxiv|medrxiv|chemrxiv|ssrn|corr|preprint)
 class Scored:
     cand: Candidate
     score: float
-    via: str  # "title": compared with the parsed title; "text": found inside the raw reference
+    via: str  # "title": compared with the parsed title; "text": found inside the raw reference;
+    # "fields": the record's author, year and title or volume and page are in the reference (_fields_agree)
     year_ok: bool | None
     author_ok: bool | None
     doi_match: bool | None = None  # the reference's DOI or arXiv id names this record; None when either has none
@@ -82,6 +86,47 @@ def _cut_short(ref: ParsedRef, cand: Candidate) -> bool:
             and f" {full} " in f" {normalize(ref.text)} ")
 
 
+_WHOLE_NUMBER = re.compile(r"(?<!\d)\d+(?!\d)")
+
+
+def _numbers_in(ref: ParsedRef) -> set[str]:
+    """The whole numbers a reference gives (year, volume, issue, pages), leaving out those inside identifiers."""
+    text = ref.text
+    for ident in filter(None, (ref.doi, ref.arxiv_id, *ref.other_ids)):
+        text = text.replace(ident.split(":", 1)[-1], " ")
+    return {n.lstrip("0") or "0" for n in _WHOLE_NUMBER.findall(text)}
+
+
+def _first_number(value: str | None) -> str | None:
+    found = _WHOLE_NUMBER.search(value or "")
+    return (found.group(0).lstrip("0") or "0") if found else None
+
+
+def _fields_agree(ref: ParsedRef, cand: Candidate) -> bool:
+    """Crossref's way of confirming a match without parsing the reference: the record's details are in it.
+    The record's first author must be the reference's (or, when none was read, open it), and its year must be
+    there, with either most of its title or both its volume and first page. This finds references in styles
+    that leave the title out (AIP: "Y. LeCun, Y. Bengio, and G. Hinton, Nature 521, 436 (2015).") and ones
+    whose title the parser could not tell apart, without letting a made-up title by a real author through."""
+    if not cand.authors or not cand.year:
+        return False
+    first = cand.authors[0]
+    surname = normalize(first.split(",")[0] if "," in first else (first.split() or [""])[-1])
+    if ref.first_author:
+        if not author_matches(ref.first_author, [first]):
+            return False
+    elif len(surname) < 2 or surname not in normalize(ref.text).split()[:3]:
+        return False
+    numbers = _numbers_in(ref)
+    if not {str(cand.year - 1), str(cand.year), str(cand.year + 1)} & numbers:
+        return False
+    whole, cited = normalize(cand.title), normalize(ref.title or "")
+    # Most of the title: but a record whose title is only the start of the cited one is another paper.
+    title_seen = partial_similarity(cand.title, ref.text) >= 0.75 and not (cited and whole != cited and whole in cited)
+    volume, page = _first_number(cand.volume), _first_number(cand.pages)
+    return title_seen or bool(volume and page and volume != page and {volume, page} <= numbers)
+
+
 def _identifiers(doi: str | None, arxiv_id: str | None) -> set[str]:
     """A paper's DOI and its arXiv id, the latter in the DOI form arXiv gives it (10.48550/arxiv.<id>)."""
     found = {doi.lower()} if doi else set()
@@ -90,13 +135,15 @@ def _identifiers(doi: str | None, arxiv_id: str | None) -> set[str]:
     return found
 
 
-def score(ref: ParsedRef, cand: Candidate) -> Scored:
+def score(ref: ParsedRef, cand: Candidate, named: bool = False) -> Scored:
+    """named: the record came from looking up an identifier the reference gives (its DOI, arXiv id or PubMed id),
+    so the reference names it, even when the index filed it under its published version's DOI."""
     year_ok = None if ref.year is None or cand.year is None else abs(ref.year - cand.year) <= 1
     author_ok = None
     if ref.first_author and cand.authors:
         author_ok = author_matches(ref.first_author, cand.authors[:3])
     cited, held = _identifiers(ref.doi, ref.arxiv_id), _identifiers(cand.doi, cand.arxiv_id)
-    doi_match = bool(cited & held) if cited and held else None
+    doi_match = True if named else (bool(cited & held) if cited and held else None)
     if ref.title:
         value, via = title_similarity(ref.title, cand.title), "title"
         if value < 1.0 and _cut_short(ref, cand):
@@ -111,6 +158,8 @@ def score(ref: ParsedRef, cand: Candidate) -> Scored:
                 value, via = loose, "text"
     else:
         value, via = partial_similarity(cand.title, ref.text), "text"
+    if value < SAME_PAPER and _fields_agree(ref, cand):
+        value, via = SAME_PAPER, "fields"
     return Scored(cand, value, via, year_ok, author_ok, doi_match)
 
 
@@ -126,8 +175,12 @@ def _doi_elsewhere(ref: ParsedRef, scored: list[Scored]) -> str | None:
                   if s.doi_match and s.via == "title" and s.score < RELATED and _same_script(ref, s.cand)), None)
     if other is None:
         return None
-    named = (f"the DOI {ref.doi}" if ref.doi and other.doi and ref.doi.lower() == other.doi.lower()
-             else f"the arXiv id {ref.arxiv_id}")
+    if ref.doi and (not ref.arxiv_id or (other.doi or "").lower() == ref.doi.lower()):
+        named = f"the DOI {ref.doi}"
+    elif ref.arxiv_id:
+        named = f"the arXiv id {ref.arxiv_id}"
+    else:
+        named = f"the id {ref.other_ids[0]}" if ref.other_ids else "the identifier"
     return f"{named} leads to a different paper, “{other.title}”" + (f" ({other.year})" if other.year else "")
 
 
@@ -198,7 +251,7 @@ def decide(ref: ParsedRef, scored: list[Scored], doi_state: str | None = None) -
     return NOT_FOUND, f"No record with a matching title (closest similarity {best.score:.2f}){tail}", best
 
 
-def _lookup(ref: ParsedRef, label: str, fn, query: str) -> tuple[Lookup, list[Scored]]:
+def _lookup(ref: ParsedRef, label: str, fn, query: str, named: bool = False) -> tuple[Lookup, list[Scored]]:
     step = Lookup(source=label, query=query)
     started = time.monotonic()
     try:
@@ -206,7 +259,7 @@ def _lookup(ref: ParsedRef, label: str, fn, query: str) -> tuple[Lookup, list[Sc
     except Exception as err:  # one failing index must not sink the whole check
         step.error, found = str(err) or type(err).__name__, []
     step.ms = int((time.monotonic() - started) * 1000)
-    scored = [score(ref, c) for c in found]
+    scored = [score(ref, c, named) for c in found]
     step.results = len(scored)
     if scored:
         top = max(scored, key=lambda s: s.score)
@@ -221,11 +274,13 @@ def _run(ref: ParsedRef, tasks: list, trace: list[Lookup], scored: list[Scored])
             scored.extend(found)
 
 
-def check_reference(raw: str) -> ExistenceResult:
+def check_reference(raw: str, model: bool = False) -> ExistenceResult:
+    """model: when the rules find no record, let a language model read the reference (_reread_with_model)."""
     started = time.monotonic()
     ref = parse_reference(raw)
     trace: list[Lookup] = []
     scored: list[Scored] = []
+    doi_state = None
 
     # Round 1: OpenAlex (and Semantic Scholar, with a key) by title, and OpenAlex by DOI when the reference
     # gives one, which costs no credits. Crossref allows only one request per second, so it joins round 1
@@ -236,12 +291,15 @@ def check_reference(raw: str) -> ExistenceResult:
             first.append(("semantic_scholar", sources.semantic_scholar, ref.title))
     else:
         first = [("crossref", sources.crossref, ref.text), ("openalex", sources.openalex, ref.text[:200])]
+    # Lookups by an identifier the reference gives cost no OpenAlex credits, and their record is the one it names.
     if ref.doi:
-        first.append(("openalex-doi", sources.openalex_doi, ref.doi))
-    # OpenAlex holds arXiv's papers under the DOI arXiv gives them, and answers for one without spending credits.
+        first.append(("openalex-doi", sources.openalex_doi, ref.doi, True))
+    # OpenAlex holds arXiv's papers under the DOI arXiv gives them.
     arxiv_doi = f"10.48550/arXiv.{ref.arxiv_id}" if ref.arxiv_id else None
     if arxiv_doi and (ref.doi or "").lower() != arxiv_doi.lower():
-        first.append(("openalex-arxiv", sources.openalex_doi, arxiv_doi))
+        first.append(("openalex-arxiv", sources.openalex_doi, arxiv_doi, True))
+    for key in ref.other_ids:  # PubMed ids, an ACL Anthology address
+        first.append((f"openalex-{key.split(':')[0]}", sources.openalex_by_id, key, True))
     _run(ref, first, trace, scored)
     verdict, reason, match = decide(ref, scored)
 
@@ -259,7 +317,7 @@ def check_reference(raw: str) -> ExistenceResult:
             if len(words) > 8:
                 second.append(("openalex-short", sources.openalex, " ".join(words[:8])))
         if ref.arxiv_id and not any(s.doi_match for s in scored):
-            second.append(("arxiv-id", sources.arxiv_by_id, ref.arxiv_id))
+            second.append(("arxiv-id", sources.arxiv_by_id, ref.arxiv_id, True))
         if second:
             _run(ref, second, trace, scored)
             verdict, reason, match = decide(ref, scored)
@@ -270,9 +328,55 @@ def check_reference(raw: str) -> ExistenceResult:
         doi_state = _ask_doi_system(ref, trace, scored)
         verdict, reason, match = decide(ref, scored, doi_state)
 
+    # A reference written in no style the rules know: a language model reads it, copying its parts, and the
+    # title it copied is searched for. Records are scored against the reference as always.
+    if verdict != VERIFIED and model:
+        reread = _reread_with_model(ref, trace)
+        if reread:
+            ref = reread
+            scored = [score(ref, s.cand, s.doi_match is True) for s in scored]
+            query = " ".join(str(part) for part in (ref.first_author, ref.title, ref.year) if part)
+            _run(ref, [("openalex", sources.openalex, ref.title), ("crossref", sources.crossref, query)], trace, scored)
+            verdict, reason, match = decide(ref, scored, doi_state)
+
     abstract, abstract_source = _pick_abstract(match, scored, trace)
     return ExistenceResult(raw, ref, verdict, reason, match, trace, round(time.monotonic() - started, 2),
                            abstract, abstract_source)
+
+
+READ_SYSTEM = """You read one bibliographic reference, which may be badly formatted, and copy out its parts.
+Copy each part exactly as the reference writes it. Do not correct, complete, translate or guess anything;
+leave a part empty when the reference does not give it.
+Answer in json, for example:
+{"title": "Deep learning", "first_author_surname": "LeCun", "year": "2015"}"""
+
+
+def _reread_with_model(ref: ParsedRef, trace: list[Lookup]) -> ParsedRef | None:
+    """A language model's reading of a reference the rules found no record for. Only parts it copied from the
+    reference are kept, so it can steer the search but never supply a title, author or year of its own.
+    None when it read nothing new."""
+    step = Lookup(source="model-reading", query=ref.text[:200])
+    started = time.monotonic()
+    try:
+        answer = llm.ask_json(READ_SYSTEM, f"Reference: {ref.text}", effort="none", max_tokens=600)
+    except llm.LLMError as err:
+        step.error, answer = str(err), {}
+    step.ms = int((time.monotonic() - started) * 1000)
+    trace.append(step)
+    within = normalize(ref.text)
+
+    def copied(value) -> str | None:
+        value = str(value or "").strip()
+        return value if normalize(value) and normalize(value) in within else None
+
+    title = copied(answer.get("title"))
+    if not title or len(normalize(title)) < 6 or normalize(title) == normalize(ref.title or ""):
+        return None
+    step.results, step.best_title = 1, title
+    surname = copied(answer.get("first_author_surname"))
+    year = copied(answer.get("year"))
+    return dataclasses.replace(ref, title=title, first_author=surname or ref.first_author,
+                               year=int(year[:4]) if year and year[:4].isdigit() else ref.year)
 
 
 def _ask_doi_system(ref: ParsedRef, trace: list[Lookup], scored: list[Scored]) -> str | None:
@@ -357,6 +461,6 @@ def _pick_abstract(match: Scored | None, scored: list[Scored], trace: list[Looku
     return None, None
 
 
-def check_many(references: list[str], workers: int = 3) -> list[ExistenceResult]:
+def check_many(references: list[str], workers: int = 3, model: bool = False) -> list[ExistenceResult]:
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-        return list(pool.map(check_reference, references))
+        return list(pool.map(lambda ref: check_reference(ref, model), references))
