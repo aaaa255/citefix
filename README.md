@@ -16,7 +16,7 @@ Language models write convincing references that do not exist, and real referenc
 2. **Does it support the sentence?** A model (DeepSeek) finds each citation in the passage, then compares the claim with the cited paper's abstract, taken from the records step 1 found, else from [PubMed](https://pubmed.ncbi.nlm.nih.gov) by DOI, else from arXiv by title. To call a citation supported, it has to quote the abstract sentence it relied on, and the quote is checked against the abstract.
 3. **If not, which paper does?** An agent with two tools, `search_papers` and `submit`, looks for a paper that supports the claim. Its suggestion is accepted only if the paper came from its own searches, its quote appears in that paper's abstract, and a separate judging call agrees. When the claim itself is wrong, it suggests rewriting the sentence instead of forcing a citation. A rewrite passes the same checks: it names the paper whose abstract supports it, either the one already cited, which keeps its number, or one from the agent's searches, which the page then offers to cite instead.
 
-The web page writes the results on the passage like proof marks: a green underline for supported, a dotted amber line for partly supported or unclear, a red wave for not supported or not found, and a blue-pencil insertion for the agent's replacement. Each verdict sits in the margin next to its sentence, with the quote it rests on.
+The web page writes the results on the passage like proof marks: a green underline for supported, a dotted orange line for partly supported or unclear, a red wave for not supported or not found, and an insertion highlighted in yellow for the agent's replacement. Each verdict sits in the margin next to its sentence, with the quote it rests on.
 
 ## Run it
 
@@ -27,6 +27,14 @@ python -m citefix serve                         # web app at http://localhost:87
 python -m citefix review examples/passage.txt   # the same check on the command line
 python -m citefix check examples/refs.txt --trace
 ```
+
+The web page is a React app in `frontend/` (Vite, Tailwind CSS, Motion, Lucide). The server serves its build from `frontend/dist`; build it once with Node 20.19 or later:
+
+```bash
+cd frontend && npm install && npm run build
+```
+
+Without a build, the server falls back to the earlier plain-HTML page in `citefix/web/`. The Dockerfile builds the page itself, so Render needs nothing extra. For work on the page, `npm run dev` in `frontend/` serves it at http://localhost:5173 and forwards `/api` to the Python server on port 8765 (see [frontend/README.md](frontend/README.md)).
 
 Put keys in `.env` (copy `.env.example`):
 
@@ -97,4 +105,4 @@ Test sets and each round's results are in `eval/`; the round-by-round notes are 
 
 ## Credits
 
-Records from [OpenAlex](https://openalex.org), [Crossref](https://www.crossref.org), [arXiv](https://arxiv.org) and [Semantic Scholar](https://www.semanticscholar.org); judgments by [DeepSeek](https://www.deepseek.com) (`deepseek-flash`); the Literata typeface via Google Fonts.
+Records from [OpenAlex](https://openalex.org), [Crossref](https://www.crossref.org), [arXiv](https://arxiv.org) and [Semantic Scholar](https://www.semanticscholar.org); judgments by [DeepSeek](https://www.deepseek.com) (`deepseek-flash`). The page is built with [React](https://react.dev), [Vite](https://vite.dev), [Tailwind CSS](https://tailwindcss.com), [Motion](https://motion.dev) and [Lucide](https://lucide.dev) icons, and set in the Geist and Literata typefaces, self-hosted from [Fontsource](https://fontsource.org) (the classic page loads Literata from Google Fonts).
